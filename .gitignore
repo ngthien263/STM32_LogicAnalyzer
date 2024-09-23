@@ -1,0 +1,23 @@
+# Keil specific files
+*.axf
+*.elf
+*.hex
+*.bin
+*.lib
+*.bak
+*.uvoptx
+*.uvguix.*
+*.uvprojx
+
+# Object files
+*.o
+*.obj
+
+# Backup files
+*~
+
+# Build directories
+RTE/*
+DebugConfig/
+Listings/
+Objects/
