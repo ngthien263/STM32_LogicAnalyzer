@@ -10,7 +10,7 @@ typedef enum
     GPIO_ALT_MODE_10M_PP    = (2<<2) | 1,  // 0b1001
     GPIO_ALT_MODE_10M_OD    = (3<<2) | 1,  // 0b1101
 
-    GPIO_OUTPUT_MODE_2M_PP  = (0<<2) | 2,  // 0b0010;
+    GPIO_OUTPUT_MODE_2M_PP  = (0<<2) | 2,  // 0b0010
     GPIO_OUTPUT_MODE_2M_OD  = (1<<2) | 2,  // 0b0110
     GPIO_ALT_MODE_2M_PP     = (2<<2) | 2,  // 0b1010
     GPIO_ALT_MODE_2M_OD     = (3<<2) | 2,  // 0b1110
@@ -18,7 +18,7 @@ typedef enum
     GPIO_OUTPUT_MODE_50M_PP = (0<<2) | 3,  // 0b0011
     GPIO_OUTPUT_MODE_50M_OD = (1<<2) | 3,  // 0b0111
     GPIO_ALT_MODE_50M_PP    = (2<<2) | 3,  // 0b1011
-    GPIO_ALT_MODE_50M_OD    = (3<<2) | 3  // 0b1111
+    GPIO_ALT_MODE_50M_OD    = (3<<2) | 3   // 0b1111
 } GPIO_MODE;
 
 
@@ -27,7 +27,7 @@ typedef enum {
     PIN8, PIN9, PIN10, PIN11, PIN12, PIN13, PIN14, PIN15
 } GPIO_PIN;
 
-void GPIO_SetMode(volatile GPIO_TypeDef *GPIOx, GPIO_PIN Pin, GPIO_MODE Mode)
+static inline void GPIO_SetMode(volatile GPIO_TypeDef* GPIOx, GPIO_PIN Pin, GPIO_MODE Mode)
 {
     if(Pin < 8)
     {

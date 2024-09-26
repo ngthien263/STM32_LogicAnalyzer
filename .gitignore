@@ -8,6 +8,7 @@
 *.uvoptx
 *.uvguix.*
 *.uvprojx
+*.scvd
 
 # Object files
 *.o
