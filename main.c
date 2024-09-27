@@ -19,16 +19,14 @@ void TIM_Init(volatile void* TIMER, uint32_t Prescaler, uint32_t Reload)
 }
 int main()
 {
-	int a = RCC_GetSysClk();
-	int b = RCC_GetAbp1Clk();
-	int c = RCC_GetAbp2Clk();
-	int d = RCC_GetHClk();
+	RCC->APB1ENR = RCC_APB1ENR_TIM2EN;
+  GPIO_SetMode(GPIOA, 0, GPIO_INPUT_MODE_PuPd);
+	TIM2->CCMR1 = TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0;
+	TIM2->CCMR2 = TIM_CCMR2_CC3S_0 | TIM_CCMR2_CC4S_0;
+	TIM2->CCER  = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
 	while(1)
 	{
-			GPIOA->ODR |= (1<<8);
-			for(int i = 0; i < 1234; i++);
-			GPIOA->ODR &= ~(1<<8);
-			for(int i = 0; i < 1234; i++);
+		
 	}
 	return 0;
 }
