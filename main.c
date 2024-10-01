@@ -1,29 +1,47 @@
 #include "main.h"                  
-void TIM_Init(volatile void* TIMER, uint32_t Prescaler, uint32_t Reload)
-{	
-	if(TIMER == TIM1)
-	{
-		RCC->APB2ENR = RCC_APB2ENR_TIM1EN;
-	}
-	else if(TIMER == TIM2 || TIMER == TIM3 || TIMER == TIM4 || TIMER == TIM5)
-		RCC->APB1ENR |= (1 << (((uint32_t)TIMER - (uint32_t)TIM2_BASE) >>  0xA));
-//  else if(TIMER == TIM9 || TIMER == TIM10 || TIMER == TIM11)
-//	  RCC->APB2ENR |= (1 << (((uint32_t)TIMER - (uint32_t)TIM9_BASE) >>  0xA));
-
-	((TIM_TypeDef*) TIMER)->CR1 = 0; 
-	((TIM_TypeDef*) TIMER)->CNT = 0;
-	((TIM_TypeDef*) TIMER)->ARR = Reload;
-	((TIM_TypeDef*) TIMER)->PSC = Prescaler;
-	((TIM_TypeDef*) TIMER)->CR1 = TIM_CR1_ARPE;
-	((TIM_TypeDef*) TIMER)->CR1 = TIM_CR1_CEN ;
+void TIM2_IRQHandler()
+{
+    
 }
+
 int main()
 {
-	RCC->APB1ENR = RCC_APB1ENR_TIM2EN;
-  GPIO_SetMode(GPIOA, 0, GPIO_INPUT_MODE_PuPd);
-	TIM2->CCMR1 = TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0;
-	TIM2->CCMR2 = TIM_CCMR2_CC3S_0 | TIM_CCMR2_CC4S_0;
-	TIM2->CCER  = TIM_CCER_CC1E | TIM_CCER_CC2E | TIM_CCER_CC3E | TIM_CCER_CC4E;
+	// Enable clock for GPIOA
+	RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
+	// Enable clock for TIM2
+	RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+	
+	// Configure Channel 1 in PWM input mode
+	TIM2->CCMR1 |= (1 << 0);              // CC1S = 01, CC1 channel is configured as input, IC1 is mapped on TI1
+	TIM2->CCER &= ~TIM_CCER_CC1P;         // Capture is done on a rising edge of IC1
+	
+	// Configure Channel 2 in PWM input mode
+	TIM2->CCMR2 |= (1 << 8);              // CC2S = 10, CC2 channel is configured as input, IC2 is mapped on TI1
+	TIM2->CCER |= TIM_CCER_CC2P;          // Capture is done on a falling edge of IC1
+	
+	// Trigger selection: Filtered Timer Input 1
+	TIM2->SMCR |= (5 << 4);
+	
+	// Slave mode selection: Reset Mode
+	TIM2->SMCR |= (1 << 3);
+	
+	// Enable capture for Channel 1
+	TIM2->CCER |= TIM_CCER_CC1E;  
+	
+	// Enable capture for Channel 2
+	TIM2->CCER |= TIM_CCER_CC2E;  
+	
+	// Enable TIM2
+	TIM2->CR1 |= TIM_CR1_CEN;
+	
+	TIM2->CCER  |= TIM_CCER_CC1E;  //CH1 Capture enable
+	TIM2->CCER  |= TIM_CCER_CC2E;  //CH2 Capture enable 
+	TIM2->CR1 |= TIM_CR1_CEN;
+	
+	
+//	RCC->APB2ENR = RCC_APB2ENR_IOPCEN;
+//	TIM2->DIER |= TIM_DIER_CC1IE;
+//  NVIC_EnableIRQ(TIM2_IRQn);
 	while(1)
 	{
 		
