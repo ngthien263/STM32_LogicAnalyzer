@@ -1,10 +1,4 @@
-#include "RCC.h"               // Device header
-typedef enum {
-    SWS_HSI         = 0,  /* HSI selected as system clock */
-    SWS_HSE         = 1,  /* HSE selected as system clock */
-    SWS_PLL         = 2,  /* PLL selected as system clock */
-    NOT_ALLOWED     = 3   /*          Not allowed         */
-} CFGR_SWS;
+#include "RCC.h"              
 
 static const uint16_t AHBpreFactorTable[16U] = {1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 8, 16, 64, 128, 256, 512};
 static const uint8_t  APBpreFactorTable[8U] =  {1, 1, 1, 1, 2, 4, 8, 16};
