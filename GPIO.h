@@ -1,3 +1,6 @@
+#ifndef __GPIO_H__
+#define __GPIO_H__
+
 #include "stm32f10x.h"
 typedef enum 
 {                 
@@ -40,3 +43,5 @@ static inline void GPIO_SetMode(volatile GPIO_TypeDef* GPIOx, GPIO_PIN Pin, GPIO
         GPIOx->CRH |= Mode << ((Pin - 8) * 4u);
     }
 }
+
+#endif /*__GPIO_H__*/
