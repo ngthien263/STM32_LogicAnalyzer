@@ -118,7 +118,7 @@ void TIM_OC2_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	TIMx->BDTR |= TIM_BDTR_OSSI|TIM_BDTR_OSSR;
 	//Calculate CCR1 for Duty Cycle
-	TIMx->CCR1 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
+	TIMx->CCR2 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
 	//Reinitialize the counter and generates an update of the registers
 	TIMx->EGR  |= TIM_EGR_UG;
 	//OC and OCN outputs are enabled
@@ -145,7 +145,7 @@ void TIM_OC3_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	TIMx->BDTR |= TIM_BDTR_OSSI|TIM_BDTR_OSSR;
 	//Calculate CCR1 for Duty Cycle
-	TIMx->CCR1 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
+	TIMx->CCR3 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
 	//Reinitialize the counter and generates an update of the registers
 	TIMx->EGR  |= TIM_EGR_UG;
 	//OC and OCN outputs are enabled
@@ -172,7 +172,7 @@ void TIM_OC4_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	TIMx->BDTR |= TIM_BDTR_OSSI|TIM_BDTR_OSSR;
 	//Calculate CCR1 for Duty Cycle
-	TIMx->CCR1 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
+	TIMx->CCR4 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
 	//Reinitialize the counter and generates an update of the registers
 	TIMx->EGR  |= TIM_EGR_UG;
 	//OC and OCN outputs are enabled
