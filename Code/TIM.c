@@ -2,9 +2,12 @@
 #include "RCC.h"
 void TIM_Init(TIM_TypeDef* TIMx, uint32_t Frequency)
 {	
-	uint32_t RCC_Clock = 0; 
-  uint32_t Reload = 0;
-  uint16_t Prescaler = 0;
+	uint32_t RCC_Clock; 
+  uint32_t Reload;
+  uint16_t Prescaler;
+	RCC_Clock = 0; 
+  Reload = 0;
+  Prescaler = 0;
 	//Enable Timer Clock
 	if(TIMx == TIM1)
 	{
@@ -21,8 +24,8 @@ void TIM_Init(TIM_TypeDef* TIMx, uint32_t Frequency)
 	Reload = (RCC_Clock/Frequency) - 1;
 	while(Reload > 0xFFFF) 
 	{
-			Reload = (RCC_Clock/(Frequency*(Prescaler + 1))) - 1;
-			Prescaler++;
+		Prescaler++;
+		Reload = (RCC_Clock/(Frequency*(Prescaler + 1))) - 1;
 	}
 		
 	//Reset Timer
@@ -47,7 +50,7 @@ void TIM_PWMICMInit(TIM_TypeDef* TIMx)
 {
 	//Initialize Timer
 	RCC->APB1ENR |= (1 << (((uint32_t)TIMx - (uint32_t)TIM2_BASE) >>  0xA));
-	
+	TIMx->PSC = 100;
 	/* Config Timer for Input Capture PWM Input Mode */
 	
 	//TIMx_ARR register is buffered
@@ -81,7 +84,7 @@ void TIM_OC1_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	/* Config Timer for PWM Mode */
 	//OC1M = 110, CC1  channel is configure as PWM Mode 1
-	TIMx->CCMR1 = (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1);	
+	TIMx->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1);	
 	//Preload register on TIMx_CCR1 enabled
 	TIMx->CCMR1 |= TIM_CCMR1_OC1PE;
 	// TIMx_ARR register is buffered
@@ -91,7 +94,7 @@ void TIM_OC1_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	TIMx->BDTR |= TIM_BDTR_OSSI|TIM_BDTR_OSSR;
 	//Calculate CCR1 for Duty Cycle
-	TIMx->CCR1 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
+	TIMx->CCR1 = (Duty_Cycle * ((float)(TIMx->ARR + 1) / 100));
 	//Reinitialize the counter and generates an update of the registers
 	TIMx->EGR  |= TIM_EGR_UG;
 	//OC and OCN outputs are enabled
@@ -108,15 +111,15 @@ void TIM_OC2_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	/* Config Timer for PWM Mode */
 	//OC2M = 110, CC2  channel is configure as PWM Mode 1
-	TIMx->CCMR1 = (TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1);	
+	TIMx->CCMR1 |= (TIM_CCMR1_OC2M_2 | TIM_CCMR1_OC2M_1);	
 	//Preload register on TIMx_CCR2 enabled
 	TIMx->CCMR1 |= TIM_CCMR1_OC2PE;
 	// TIMx_ARR register is buffered
-	TIMx->CR1 |= TIM_CR1_ARPE;
+	TIMx->CR1   |= TIM_CR1_ARPE;
 	//OC2 signal is output on the corresponding output pin
-	TIMx->CCER |= TIM_CCER_CC2E;
+	TIMx->CCER  |= TIM_CCER_CC2E;
 	
-	TIMx->BDTR |= TIM_BDTR_OSSI|TIM_BDTR_OSSR;
+	TIMx->BDTR  |= TIM_BDTR_OSSI|TIM_BDTR_OSSR;
 	//Calculate CCR1 for Duty Cycle
 	TIMx->CCR2 = (Duty_Cycle * ((TIMx->ARR + 1) / 100));
 	//Reinitialize the counter and generates an update of the registers
@@ -135,7 +138,7 @@ void TIM_OC3_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	/* Config Timer for PWM Mode */
 	//OC3M = 110, CC3  channel is configure as PWM Mode 1
-	TIMx->CCMR2 = (TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1);	
+	TIMx->CCMR2 |= (TIM_CCMR2_OC3M_2 | TIM_CCMR2_OC3M_1);	
 	//Preload register on TIMx_CCR3 enabled
 	TIMx->CCMR2 |= TIM_CCMR2_OC3PE;
 	// TIMx_ARR register is buffered
@@ -162,7 +165,7 @@ void TIM_OC4_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	
 	/* Config Timer for PWM Mode */
 	//OC4M = 110, CC4  channel is configure as PWM Mode 1
-	TIMx->CCMR2 = (TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1);	
+	TIMx->CCMR2 |= (TIM_CCMR2_OC4M_2 | TIM_CCMR2_OC4M_1);	
 	//Preload register on TIMx_CCR4 enabled
 	TIMx->CCMR2 |= TIM_CCMR2_OC4PE;
 	// TIMx_ARR register is buffered
