@@ -28,8 +28,9 @@ void TIM2_IRQHandler() {
 }
 
 int main() {
-    // Configure GPIO and timers
+    // Configure GPIO and timers  
     TIM1_PWMOC(20000, 30);
+		USART1_Config(4500000);
     TIM2_PWMIC();
 
     char buffer[50];
@@ -55,6 +56,7 @@ int main() {
 //Configure USART1
 void USART1_Config(uint32_t BAUD_RATE)
 {
+	RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
 	// Initialize UART1
   USART_Init(USART1, BAUD_RATE);
 	// Configure GPIO for UART
@@ -67,7 +69,7 @@ void USART1_Config(uint32_t BAUD_RATE)
 // Configure GPIO for Timer 1 and UART
 void TIM1_PinConfig() {
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
-    GPIO_SetMode(GPIOA, 6, GPIO_ALT_MODE_50M_PP);
+    GPIO_SetMode(GPIOA, 8, GPIO_ALT_MODE_50M_PP);
 }
 
 // Initialize PWM output for Timer 1 function
