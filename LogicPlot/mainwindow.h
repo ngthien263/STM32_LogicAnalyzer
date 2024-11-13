@@ -3,13 +3,12 @@
 
 #include <QMainWindow>
 #include <QSerialPort>
-#include <QSerialPortInfo>
 #include "qcustomplot.h"
+#include <QElapsedTimer>
+#include <vector>
 
 QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
+namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -21,29 +20,25 @@ public:
     ~MainWindow();
 
 private slots:
-    void readSerialData(); // Hàm để đọc dữ liệu từ UART
-    void updatePlot();
-
+    void readSerialData();
+    void pausePlot();       // Ensure correct naming
+    void continuePlot();    // Ensure correct naming
+    void mouseMoveEvent(QMouseEvent *event);
 private:
-    QSerialPort *serial;  // Cổng UART
-    QCustomPlot *customPlot; // Đồ thị
-    QTimer dataTimer;     // Bộ đếm thời gian để cập nhật dữ liệu
-    QVector<double> highTimes, lowTimes; // Các vector lưu dữ liệu
     Ui::MainWindow *ui;
-    int highTime;
-    int lowTime;
-    int signalTime;
-    double beforeTime;
+    QCustomPlot *customPlot;
+    QSerialPort *serial;
+    QElapsedTimer elapsedTimer;
+    double lastByteTime;
+    bool isZooming;
+    bool isPaused; // Correctly declare isPaused
+    double actX;     // Active X position
+    double timeFrame ; // Time frame for the x-axis
+    bool autorun; // Flag to auto-follow new data
 
-    // Trạng thái hiện tại (đang đọc thời gian mức cao hay mức thấp)
-    enum State { HIGH = 1, LOW = 0 };
-    State currentState;
+    std::vector<std::pair<double, char>> dataBuffer;
 
-    // Hàng đợi để lưu trữ dữ liệu đọc từ UART
-    QQueue<int> dataSignalQueue;
-    QQueue<int> dataTimeQueue;
-
-    // Biến để lưu giá trị thời gian cũ nhằm loại bỏ dữ liệu cũ khi cần
-    double oldKey;
+    void plotData(double currentTime, char byte);
 };
+
 #endif // MAINWINDOW_H
