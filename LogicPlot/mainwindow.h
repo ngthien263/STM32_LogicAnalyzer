@@ -23,7 +23,7 @@ private slots:
     void readSerialData();
     void pausePlot();       // Ensure correct naming
     void continuePlot();    // Ensure correct naming
-    void mouseMoveEvent(QMouseEvent *event);
+    //void setupTimer();
 private:
     Ui::MainWindow *ui;
     QCustomPlot *customPlot;
@@ -37,8 +37,8 @@ private:
     bool autorun; // Flag to auto-follow new data
 
     std::vector<std::pair<double, char>> dataBuffer;
+    void plotData(double currentTime, int byte);
 
-    void plotData(double currentTime, char byte);
 };
 
 #endif // MAINWINDOW_H

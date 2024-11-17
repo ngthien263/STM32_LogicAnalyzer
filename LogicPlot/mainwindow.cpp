@@ -4,7 +4,7 @@
 #include <QElapsedTimer>
 #include <QVBoxLayout>
 #include <QPushButton>
-
+QByteArray buffer;
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Set up the QCustomPlot
     setCentralWidget(customPlot);
-    customPlot->addGraph(); // Đường đồ thị 1 (high time)
+    customPlot->addGraph();
     customPlot->graph(0)->setPen(QPen(Qt::blue)); // Đặt màu xanh cho high time
     customPlot->xAxis->setLabel("Time");
     customPlot->yAxis->setLabel("Signal");
@@ -75,69 +75,120 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
-
+int disconected = 0;
 void MainWindow::pausePlot() {
     isPaused = true;
-    autorun = false; // Disable autorun when paused
+    if(disconnect(serial, &QSerialPort::readyRead, this, &MainWindow::readSerialData))
+    {
+        buffer.clear(); // Xóa bộ đệm khi tạm dừng
+        disconected = 1;
+    }
+
     qDebug() << "Paused"; // Debug message to confirm pause
 }
 
 void MainWindow::continuePlot() {
     isPaused = false;
-    autorun = true; // Enable autorun when continuing
-    customPlot->graph(0)->data()->clear(); // Clear data using `clear`
-    dataBuffer.clear(); // Clear the buffer to ensure no old data is plotted
-
+    if(connect(serial, &QSerialPort::readyRead, this, &MainWindow::readSerialData))
+        disconected = 0;
+    //customPlot->graph(0)->data()->clear(); // Clear data using `clear`
+    lastByteTime = elapsedTimer.elapsed() / 1000.0;
     qDebug() << "Continued"; // Debug message to confirm continue
 }
 
-
+int receivedFrequency;
+int receivedDutyCycle;
+int IsFreqAndDutyRead = 0;
 void MainWindow::readSerialData() {
-    static QByteArray buffer;
+    const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
 
-    // Read data from UART
-    buffer += serial->readAll();
-    qDebug() << "Received buffer:" << buffer;
+    if (buffer.size() < MAX_SIZE) {
+        buffer += serial->readAll();
+    } else {
+        // Xử lý trường hợp mảng đã đầy
+        qDebug() << "Buffer is full!";
+    }
 
-    // Get the current elapsed time
+
+    QString strFreq;
+    QString strDuty;
     double currentTime = elapsedTimer.elapsed() / 1000.0; // Convert to seconds
 
-    // Process each character in the buffer
+    while (IsFreqAndDutyRead == 0) {
+        if(buffer[0] == '1' || buffer[0] == '0')
+            break;
+        int indexFreq = buffer.indexOf("F:");
+        int indexDuty = buffer.indexOf("D:");
+
+        // Check if both "F:" and "D:" exist in the buffer
+        if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
+            break; // Break if either "F:" or "D:" are not found or if indexDuty < indexFreq
+        }
+
+        // Find the end of the frequency string
+        int endIndexFreq = buffer.indexOf('\n', indexFreq);
+        if (endIndexFreq == -1) {
+            break; // Incomplete frequency string, exit the loop
+        }
+
+        // Find the end of the duty cycle string
+        int endIndexDuty = buffer.indexOf('\n', indexDuty);
+        if (endIndexDuty == -1) {
+            break; // Incomplete duty cycle string, exit the loop
+        }
+
+        // Extract the frequency and duty cycle values
+        strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
+        strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
+
+        // Convert strings to integers
+        receivedFrequency = strFreq.toInt();
+        receivedDutyCycle = strDuty.toInt();
+
+        qDebug() << "Received Frequency:" << receivedFrequency;
+        qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
+
+        // Remove frequency and duty cycle parts
+        buffer.remove(indexFreq, endIndexFreq - indexFreq + 1);
+        buffer.remove(indexDuty - (endIndexFreq - indexFreq + 1), endIndexDuty - indexDuty + 1);
+        qDebug() << "Plotting data for byte:" << buffer;
+        IsFreqAndDutyRead = 1;
+    }
     while (!buffer.isEmpty()) {
         char byte = buffer.at(0);
         buffer.remove(0, 1); // Remove the processed character from the buffer
+        qDebug() << "Plotting data for byte:" << byte;
+        plotData(currentTime, byte); // Call plotData with currentTime and byte
+    }
+}
 
-        // Calculate the interval between bytes
-        double interval = currentTime - lastByteTime;
-        qDebug() << "Time interval between bytes:" << interval << " seconds";
 
-        // Update the last byte time
+void MainWindow::plotData(double currentTime, int byte) {
+    double highTime = (1.0 / receivedFrequency) * (receivedDutyCycle / 100.0);
+    double lowTime  = (1.0 / receivedFrequency) * ((100 - receivedDutyCycle) / 100.0);
+    qDebug() << "\nHigh time:" <<  highTime;
+    qDebug() << "\nLow time:" <<  lowTime;
+
+    if (lastByteTime == 0) {
         lastByteTime = currentTime;
-
-        if (isPaused) {
-            ;
-        } else {
-            plotData(currentTime, byte);
-            customPlot->xAxis->setRange(currentTime - 1.5, currentTime + 1);
-            customPlot->replot();
-        }
     }
-}
 
-void MainWindow::plotData(double currentTime, char byte) {
     if (byte == '1') {
-        customPlot->graph(0)->addData(lastByteTime, 0); // Ensure the previous state is added
-        customPlot->graph(0)->addData(lastByteTime, 1); // Rising edge
-        customPlot->graph(0)->addData(currentTime, 1); // Maintain state until now
+        qDebug() << "Plotting high state";
+        customPlot->graph(0)->addData(lastByteTime, 0);
+        customPlot->graph(0)->addData(lastByteTime, 1);
+        customPlot->graph(0)->addData(lastByteTime + highTime, 1);
+        lastByteTime += highTime;
     } else if (byte == '0') {
-        customPlot->graph(0)->addData(lastByteTime, 1); // Ensure the previous state is added
-        customPlot->graph(0)->addData(lastByteTime, 0); // Falling edge
-        customPlot->graph(0)->addData(currentTime, 0); // Maintain state until now
+        qDebug() << "Plotting low state";
+        customPlot->graph(0)->addData(lastByteTime, 1);
+        customPlot->graph(0)->addData(lastByteTime, 0);
+        customPlot->graph(0)->addData(lastByteTime + lowTime, 0);
+        lastByteTime += lowTime;
     }
-}
-
-
-void MainWindow::mouseMoveEvent(QMouseEvent *event) {
-    QMainWindow::mouseMoveEvent(event);
-    isZooming = (event->buttons() & Qt::RightButton) || (event->buttons() & Qt::MiddleButton);
+    else{
+        ;
+    }
+    customPlot->xAxis->setRange(currentTime - 1.5, currentTime + 1);
+    customPlot->replot();
 }
