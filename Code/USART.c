@@ -27,8 +27,8 @@ void USART_Init(USART_TypeDef* USARTx, uint32_t BAUD_RATE){
 
 void USART_send(USART_TypeDef *USARTx, unsigned char c)
 {
-				while(!(USARTx->SR & USART_SR_TXE)){;}
-        USARTx->DR = c;
+		while(!(USARTx->SR & USART_SR_TXE)){;}
+		USARTx->DR = c;
 }
 
 void USART_str(USART_TypeDef *USARTx, unsigned char *str)

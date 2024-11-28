@@ -50,7 +50,7 @@ void TIM_PWMICMInit(TIM_TypeDef* TIMx)
 {
 	//Initialize Timer
 	RCC->APB1ENR |= (1 << (((uint32_t)TIMx - (uint32_t)TIM2_BASE) >>  0xA));
-	TIMx->PSC = 100;
+	TIMx->PSC = 1000;
 	/* Config Timer for Input Capture PWM Input Mode */
 	
 	//TIMx_ARR register is buffered
@@ -69,7 +69,7 @@ void TIM_PWMICMInit(TIM_TypeDef* TIMx)
 	TIMx->CCMR1 |= TIM_CCMR1_CC2S_1;              // CC2S = 10, CC2 channel is configured as input, IC2 is mapped on TI1
 	TIMx->CCER |= TIM_CCER_CC2P;                  // Capture is done on a falling edge of IC1	
 	// Capture/Compare 1 interrupt enable
-	TIMx->DIER  |= TIM_DIER_CC1IE | TIM_DIER_CC2IE;	
+	TIMx->DIER  |= TIM_DIER_CC1IE | TIM_DIER_CC2IE|TIM_DIER_UIE ;	
 	//Enable CH1 & CH2
 	TIMx->CCER  |= TIM_CCER_CC1E | TIM_CCER_CC2E;	
 	//Enable TIMx

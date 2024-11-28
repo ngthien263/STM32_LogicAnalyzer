@@ -1,55 +1,70 @@
 #include "main.h"
-
+char signal = 0;
 // Interrupt Service Routine for Timer 2
 void TIM2_IRQHandler() {
+		static char lastByte;
+		static uint32_t lastTime = 0;
     if (TIM2->SR & TIM_SR_CC1IF) { // Check for capture/compare 1 interrupt flag
         TIM2->SR &= ~TIM_SR_CC1IF; // Clear the interrupt flag
         IC1Val = TIM2->CCR1; // Read the captured value
+				lastByte = '1';
         if (stringSent) { // If the frequency and duty cycle string has been sent
-            USART_send(USART1, '1'); // Send '1' via UART
+            USART_send(USART1, lastByte); // Send '1' via UART
         }
     } else if (TIM2->SR & TIM_SR_CC2IF) { // Check for capture/compare 2 interrupt flag
         TIM2->SR &= ~TIM_SR_CC2IF; // Clear the interrupt flag
         IC2Val = TIM2->CCR2; // Read the captured value
+        lastByte = '0';
         if (stringSent) { // If the frequency and duty cycle string has been sent
-            USART_send(USART1, '0'); // Send '0' via UART
+            USART_send(USART1, lastByte); // Send '0' via UART
+        }
+    }
+		
+		if (TIM2->SR & TIM_SR_UIF) {
+        TIM2->SR &= ~TIM_SR_UIF; // Clear the interrupt flag
+        uint32_t currentTime = TIM2->CNT;
+        
+        // Check if there has been no activity for a set time (e.g., 10ms)
+        if (currentTime - lastTime > 10) {
+            if (stringSent) { // If the frequency and duty cycle string has been sent
+                USART_send(USART1, lastByte); // Send last recorded byte via UART when no pulse input
+            }
+            lastTime = currentTime; // Update last activity time
         }
     }
 
     // Calculate duty cycle and frequency
     Duty = IC2Val * 100 / IC1Val;
     Freq = (uint32_t)(RCC_GetAbp1Clk() / (IC1Val * (TIM2->PSC + 1)));
-
     // Updatefrequency or duty cycle if change 
     if (old_freq != Freq || old_duty != (uint32_t)Duty) {
-        update = 1; // Set update flag
+        update++; // Set update flag
         stringSent = 0; // Reset stringSent flag
     }
 }
 
+void clearCharArray(char* str) {
+    for(int i = 0; str[i] != '\0'; i++) {
+        str[i] = '\0';
+    }
+}
 int main() {
     // Configure GPIO and timers  
-    TIM1_PWMOC(20000, 30);
-		USART1_Config(4500000);
+    TIM1_PWMOC(10, 50);
+		USART1_Config(115200);
     TIM2_PWMIC();
-
     char buffer[50];
-    int check = 0;
-
     while (1) {
-        if (update == 1) { // If update flag is set
-            old_freq = Freq; // Update old frequency
-            old_duty = Duty; // Update old duty cycle
-            update = 0; // Reset update flag
-            sprintf(buffer, "F:%uD:%u\n", Freq, Duty); // Format frequency and duty cycle string
-            USART_str(USART1, (unsigned char *)buffer); // Send string via UART
-            check++;
-        }
-        if (check >= 2) { // After sending the string twice
-            check = 0; // Reset check counter
-            stringSent = 1; // Set stringSent flag
-        }
-    }
+			if (update == 4) { // If update flag is set
+					old_freq = Freq; // Update old frequency
+					old_duty = Duty; // Update old duty cycle
+					update = 0; // Reset update flag
+					sprintf(buffer, "F:%u\nD:%u\n", Freq, Duty); // Format frequency and duty cycle string
+					USART_str(USART1, (unsigned char *)buffer); // Send string via UART
+					clearCharArray(buffer);
+					stringSent = 1;
+			} 
+		}
     return 0;
 }
 
