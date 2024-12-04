@@ -11,7 +11,7 @@
 #include <QSerialPortInfo>
 #include <QVBoxLayout>
 #include <QLabel>
-
+#include <QTimer>
 class Serial;
 class Plot;
 
@@ -33,6 +33,7 @@ private slots:
     void stopSerialConnection();
     void openSerialPort();
     void readSerialData(QSerialPort *serialPort);
+   // void handleTimeout();
 private:
     Ui::MainWindow *ui;
     Plot *plot;
@@ -53,6 +54,7 @@ private:
     QLabel *frequencyLabel;      // Nhãn hiển thị tần số
     QLabel *dutyCycleLabel;
 
+    char lastByte;
 };
 
 #endif // MAINWINDOW_H

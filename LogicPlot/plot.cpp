@@ -38,57 +38,51 @@ QCustomPlot* Plot::setupPlot()
     customPlot->graph(0)->setPen(pen);
     return customPlot;
 }
-void Plot::plotData(QCustomPlot *customPlot, QByteArray &buffer, double currentTime, int receivedFrequency, int receivedDutyCycle) {
+void Plot::plotData(QCustomPlot *customPlot, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag) {
     double highTime = (1.0 / receivedFrequency) * (receivedDutyCycle / 100.0);
     double lowTime  = (1.0 / receivedFrequency) * ((100 - receivedDutyCycle) / 100.0);
-    qDebug() << "\nHigh time:" <<  highTime;
-    qDebug() << "\nLow time:" <<  lowTime;
+    qDebug() << "\nHigh time:" << highTime;
+    qDebug() << "\nLow time:" << lowTime;
 
-    if (lastByteTime == 0.0) {
-        lastByteTime = currentTime;
+    if (lastByteTime == 0.0 || lastByteTime < 0 || updateTimeFlag == 1) {
+        updateTimeFlag = 0;
+        lastByteTime = currentTime; // Khởi tạo lại nếu cần thiết
     }
 
     if (customPlot == nullptr || customPlot->graph(0) == nullptr) {
-        qDebug() << "customPlot or customPlot->graph(0) is null, exiting function.";
+        qDebug() << "customPlot hoặc customPlot->graph(0) là null, thoát hàm.";
         return;
     }
 
-    if (buffer.isEmpty()) {
-        qDebug() << "Buffer is empty, exiting function.";
-        return;
-    }
 
-    int bufferIndex = 0;
     while (!buffer.isEmpty()) {
-        char byte = buffer.at(bufferIndex);
-        buffer.remove(0, 1);
-        qDebug() << "Processing byte:" << byte;
+        lastByte = buffer.at(0); // Lấy byte đầu tiên
+        buffer.remove(0, 1); // Xóa byte đầu tiên khỏi buffer
+        qDebug() << "Đang xử lý byte:" << lastByte;
 
-        if (byte == '1') {
-            qDebug() << "Plotting high state" << byte;
+        if (lastByte == '1') {
+            qDebug() << "Đang vẽ trạng thái high" << lastByte;
             customPlot->graph(0)->addData(lastByteTime, 0);
             customPlot->graph(0)->addData(lastByteTime, 1);
             customPlot->graph(0)->addData(lastByteTime + highTime, 1);
             lastByteTime += highTime;
-        } else if (byte == '0') {
-            qDebug() << "Plotting low state" << byte;
+        } else if (lastByte == '0') {
+            qDebug() << "Đang vẽ trạng thái low" << lastByte;
             customPlot->graph(0)->addData(lastByteTime, 1);
             customPlot->graph(0)->addData(lastByteTime, 0);
             customPlot->graph(0)->addData(lastByteTime + lowTime, 0);
             lastByteTime += lowTime;
         } else {
-            qDebug() << "Unexpected byte value:" << byte;
+            qDebug() << "Giá trị byte không hợp lệ:" << lastByte;
         }
-
-        // if (bufferIndex >= buffer.size()) {
-        //     qDebug() << "Buffer index out of range, stopping loop.";
-        //     break;
-        // }
     }
 
-    customPlot->xAxis->setRange(currentTime - 1.5, currentTime + 1);
+    // Điều chỉnh phạm vi trục x để phản ánh thời gian hiện tại
+    customPlot->xAxis->setRange(lastByteTime - 1, lastByteTime + 1);
     customPlot->replot();
 }
+
+
 
 
 

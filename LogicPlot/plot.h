@@ -27,20 +27,23 @@ private:
 
     int disconectedFlag = 0;
 
+    char lastByte = 0;
     QCustomPlot *customPlot;
-
+    QElapsedTimer elapsedTimer;
 public:
     explicit Plot(QObject *parent = nullptr); // Constructor mặc định
 
     explicit Plot(QCustomPlot *plot, QObject *parent = nullptr);
 
-    void plotData(QCustomPlot *customPlot, QByteArray &buffer, double currentTime, int receivedFrequency, int receivedDutyCycle);
+    void plotData(QCustomPlot *customPlot, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag);
 
     QCustomPlot* setupPlot();
 
+    //void continuePlot(QCustomPlot *customPlot, double currentTime);
 public slots:
     //void pausePlot();       // Ensure correct naming
     //void continuePlot();    // Ensure correct naming
     void setSerial(Serial *serialObj);
+
 };
 #endif // PLOT_H

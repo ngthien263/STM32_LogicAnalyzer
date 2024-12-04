@@ -16,11 +16,13 @@ MainWindow::MainWindow(Serial *serial, Plot *plot, QWidget *parent)
 {
     ui->setupUi(this);
     setupUI();
+    elapsedTimer.start();
     setupPlot();
     serial->setPlot(plot);
     plot->setSerial(serial);
 }
-
+double currentTime;
+int updateTimeFlag = 0;
 void MainWindow::setupUI()
 {
     // Tạo các widget
@@ -139,7 +141,7 @@ void MainWindow::updateCOMPorts()
         comPortComboBox->setEnabled(true); // Kích hoạt ComboBox nếu có cổng
     }
 }
-int IsFreqAndDutyRead;
+int IsFreqAndDutyRead = 0;
 int receivedFrequency;
 int  receivedDutyCycle;
 void MainWindow::readSerialData(QSerialPort *serialPort) {
@@ -211,10 +213,11 @@ void MainWindow::readSerialData(QSerialPort *serialPort) {
         IsFreqAndDutyRead = 1;
         qDebug() << "Plotting data for byte:" << buffer;
     }
+
     qDebug() << "Plotting data for byte:" << buffer;
     if (IsFreqAndDutyRead == 1) {
-        double currentTime = elapsedTimer.elapsed() / 1000.0;
-        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle);
+        currentTime = elapsedTimer.elapsed() / 1000.0;
+        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
     } else {
         qDebug() << "Plot object is null!";
     }
@@ -262,21 +265,25 @@ void MainWindow::startSerialConnection()
 
 void MainWindow::openSerialPort()
 {
+
     // Đảm bảo cổng nối tiếp không mở trước khi mở
     if (serialPort->isOpen()) {
         serialPort->close();
     }
+
     // Lấy thông tin cổng và baudrate từ ComboBox
     QString portName = comPortComboBox->currentText();
     int baudRate = baudrateComboBox->currentText().toInt();
 
-    serial->setupSerialPort(serialPort, portName, baudRate);
+    if(serial->setupSerialPort(serialPort, portName, baudRate))
+        updateTimeFlag = 1;
     connect(serialPort, &QSerialPort::readyRead, this, [=]() {
+        currentTime = elapsedTimer.elapsed() / 1000.0; // Cập nhật currentTime ở đây
+        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
         readSerialData(serialPort);
     });
-
-
 }
+
 
 
 void MainWindow::stopSerialConnection()
@@ -286,6 +293,7 @@ void MainWindow::stopSerialConnection()
         qDebug() << "Serial port stopped.";
     }
 }
+
 
 MainWindow::~MainWindow()
 {
