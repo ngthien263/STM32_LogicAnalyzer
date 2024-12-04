@@ -183,4 +183,3 @@ void TIM_OC4_PWMM1_Init(TIM_TypeDef* TIMx, uint32_t Frequency, uint32_t Duty_Cyc
 	//Enable TIMx
 	TIMx->CR1 |= TIM_CR1_CEN;
 }
-
