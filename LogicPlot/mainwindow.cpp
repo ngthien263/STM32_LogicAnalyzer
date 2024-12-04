@@ -2,27 +2,127 @@
 #include "ui_mainwindow.h"
 #include "qcustomplot.h"
 #include <QElapsedTimer>
-#include <QVBoxLayout>
-#include <QPushButton>
-QByteArray buffer;
-MainWindow::MainWindow(QWidget *parent)
+#include "serial.h"
+#include "plot.h"
+
+MainWindow::MainWindow(Serial *serial, Plot *plot, QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , customPlot(new QCustomPlot(this))
-    , isZooming(false)
-    , lastByteTime(0)
-    , isPaused(false)
-    , actX(0)
-    , timeFrame(10)
-    , autorun(true)
+    , serialPort(new QSerialPort(this))
+    , serial(serial)
+    , plot(new Plot(customPlot, this))
+    , buffer()
 {
     ui->setupUi(this);
 
+    serial->setPlot(plot);
+    plot->setSerial(serial);
+
+    setupUI();
+    setupPlot();
+}
+
+void MainWindow::setupUI()
+{
+    // Tạo các widget
+    QWidget *centralWidget = new QWidget(this);
+    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
+
+    // Create a layout for buttons
+    QVBoxLayout *layout = new QVBoxLayout();
+    QWidget *widget = new QWidget();
+    widget->setLayout(layout);
+
+    // Create and add pause and continue buttons
+    // QPushButton *pauseButton = new QPushButton("Pause", this);
+    // QPushButton *continueButton = new QPushButton("Continue", this);
+    layout->addWidget(customPlot);
+    // layout->addWidget(pauseButton);
+    // layout->addWidget(continueButton);
+
+    // Set widget as central widget
+    //setCentralWidget(widget);
+
+    // Connect button signals to slots
+    // connect(pauseButton, &QPushButton::clicked, plot, &Plot::pausePlot);
+    // connect(continueButton, &QPushButton::clicked, plot, &Plot::continuePlot);
+
+    // Menu bên phải
+    QVBoxLayout *menuLayout = new QVBoxLayout();
+    QLabel *menuLabel = new QLabel("Menu", this);
+    menuLayout->addWidget(menuLabel);
+
+    // Tạo layout ngang cho Baudrate
+    QHBoxLayout *baudrateLayout = new QHBoxLayout();
+    baudrateLayout->addWidget(new QLabel("Baudrate:", this)); // Nhãn "Baudrate"
+    baudrateComboBox = new QComboBox(this);
+    baudrateComboBox->addItems({"9600", "19200", "38400", "57600", "115200"});
+    baudrateComboBox->setFixedSize(200, 30); // Đặt kích thước cố định cho ComboBox
+    baudrateLayout->addWidget(baudrateComboBox); // Thêm ComboBox vào cùng hàng
+
+    // Thêm layout ngang này vào menuLayout
+    menuLayout->addLayout(baudrateLayout);
+
+    // COM Port ComboBox
+    // Tạo layout ngang cho COM Port
+
+    QHBoxLayout *comPortLayout = new QHBoxLayout();
+    comPortLayout->addWidget(new QLabel("COM Port:", this)); // Thêm nhãn "COM Port:"
+
+    // Tạo ComboBox để hiển thị danh sách cổng COM
+    comPortComboBox = new QComboBox(this);
+    comPortComboBox->setFixedSize(200, 30); // Đặt kích thước cố định cho ComboBox
+    comPortLayout->addWidget(comPortComboBox); // Thêm ComboBox vào layout
+
+    // Thêm layout ngang này vào menuLayout
+    menuLayout->addLayout(comPortLayout);
+
+    // Cập nhật danh sách các cổng COM khả dụng
+    updateCOMPorts();
+
+    // Start and Stop buttons
+    startButton = new QPushButton("Start", this);
+    stopButton = new QPushButton("Stop", this);
+
+    //menuLayout->addWidget(startButton);
+    //menuLayout->addWidget(stopButton);
+    startButton->setGeometry(550, 250, 100, 30);
+    stopButton->setGeometry(670, 250, 100, 30);
+
+    //nút Open mở cổng
+    openButton = new QPushButton("Open", this); // Tạo nút Open
+    //menuLayout->addWidget(openButton); // Thêm nút vào menu
+    openButton->setGeometry(550, 280, 100, 30);
+    connect(openButton, &QPushButton::clicked, this, &MainWindow::openSerialPort); // Kết nối tín hiệu nút với slot
+
+
+    // Frequency and Duty Cycle labels
+    frequencyLabel = new QLabel("Frequency: 0 Hz", this);
+    dutyCycleLabel = new QLabel("Duty Cycle: 0%", this);
+    menuLayout->addWidget(frequencyLabel);
+    menuLayout->addWidget(dutyCycleLabel);
+
+    // Set up layout
+    QHBoxLayout *mainHorizontalLayout = new QHBoxLayout();
+    mainHorizontalLayout->addWidget(customPlot, 2); // Đồ thị chiếm 2 phần
+    mainHorizontalLayout->addLayout(menuLayout, 1); // Menu chiếm 1 phần
+    mainLayout->addLayout(mainHorizontalLayout);
+
+    setCentralWidget(centralWidget);
+
+    // Kết nối các nút
+    connect(startButton, &QPushButton::clicked, this, &MainWindow::startSerialConnection);
+    connect(stopButton, &QPushButton::clicked, this, &MainWindow::stopSerialConnection);
+}
+
+void MainWindow::setupPlot()
+{
     // Set up the QCustomPlot
-    setCentralWidget(customPlot);
+    //setCentralWidget(customPlot);
     customPlot->addGraph();
-    customPlot->graph(0)->setPen(QPen(Qt::blue)); // Đặt màu xanh cho high time
-    customPlot->xAxis->setLabel("Time");
+    customPlot->graph(0)->setPen(QPen(Qt::red));
+    customPlot->xAxis->setLabel("Times");
     customPlot->yAxis->setLabel("Signal");
     customPlot->xAxis->setRange(5, 10);
     customPlot->yAxis->setRange(-2, 5);
@@ -38,157 +138,90 @@ MainWindow::MainWindow(QWidget *parent)
     QPen pen;
     pen.setWidthF(3); // Đặt độ dày nét vẽ nhỏ để vẽ nhanh hơn
     customPlot->graph(0)->setPen(pen);
+}
 
-    // Create a layout for buttons
-    QVBoxLayout *layout = new QVBoxLayout();
-    QWidget *widget = new QWidget();
-    widget->setLayout(layout);
-
-    // Create and add pause and continue buttons
-    QPushButton *pauseButton = new QPushButton("Pause", this);
-    QPushButton *continueButton = new QPushButton("Continue", this);
-    layout->addWidget(customPlot);
-    layout->addWidget(pauseButton);
-    layout->addWidget(continueButton);
-
-    // Set widget as central widget
-    setCentralWidget(widget);
-
-    // Connect button signals to slots
-    connect(pauseButton, &QPushButton::clicked, this, &MainWindow::pausePlot);
-    connect(continueButton, &QPushButton::clicked, this, &MainWindow::continuePlot);
-
-    // Setup the serial port
-    serial = new QSerialPort(this);
-    serial->setPortName("COM4"); // Change the port name as needed
-    serial->setBaudRate(QSerialPort::Baud115200);
-    connect(serial, &QSerialPort::readyRead, this, &MainWindow::readSerialData);
-    if (!serial->open(QIODevice::ReadOnly)) {
-        qDebug() << "Failed to open serial port:" << serial->errorString();
+void MainWindow::updateCOMPorts()
+{
+    comPortComboBox->clear(); // Xóa danh sách cũ
+    const auto ports = QSerialPortInfo::availablePorts();
+    for (const QSerialPortInfo &port : ports) {
+        comPortComboBox->addItem(port.portName()); // Thêm từng cổng COM vào ComboBox
     }
 
-    // Start the elapsed timer
-    elapsedTimer.start();
+    if (comPortComboBox->count() == 0) {
+        comPortComboBox->addItem("No COM Ports"); // Hiển thị thông báo nếu không có cổng khả dụng
+        comPortComboBox->setEnabled(false); // Vô hiệu hóa ComboBox
+    } else {
+        comPortComboBox->setEnabled(true); // Kích hoạt ComboBox nếu có cổng
+    }
+}
+
+void MainWindow::startSerialConnection()
+{
+    if (!serialPort->isOpen()) {
+        qDebug() << "Error: Serial port is not open!";
+        return;
+    }
+
+    // Xóa dữ liệu cũ trong serialPort
+    serialPort->clear();
+
+    // Gửi lệnh "REQ" tới vi điều khiển
+    QByteArray command(1, '1'); // Tạo QByteArray chứa ký tự '1'
+    qint64 bytesWritten = serialPort->write(command);
+
+    qDebug() << "Write:" << command;
+
+    // Kiểm tra số byte đã thực sự được gửi
+    if (bytesWritten == -1) {
+        qDebug() << "Write error:" << serialPort->errorString();
+        return;
+    } else if (bytesWritten < command.size()) {
+        qDebug() << "Only part of the data was written. Bytes written:" << bytesWritten;
+        return;
+    } else {
+        qDebug() << "Command '1' sent successfully!";
+    }
+
+    // Theo dõi lỗi giao tiếp
+    connect(serialPort, &QSerialPort::errorOccurred, this, [](QSerialPort::SerialPortError error) {
+        if (error != QSerialPort::NoError) {
+            qDebug() << "Serial port error occurred:" << error;
+        }
+    });
+
+    // Kết nối tín hiệu readyRead để xử lý dữ liệu nhận được
+        serial->readSerialData(serialPort);
+}
+
+
+
+void MainWindow::openSerialPort()
+{
+    // Đảm bảo cổng nối tiếp không mở trước khi mở
+    if (serialPort->isOpen()) {
+        serialPort->close();
+    }
+    // Lấy thông tin cổng và baudrate từ ComboBox
+    QString portName = comPortComboBox->currentText();
+    int baudRate = baudrateComboBox->currentText().toInt();
+
+    serial->setupSerialPort(serialPort, portName, baudRate);
+    connect(serialPort, &QSerialPort::readyRead, serial, &Serial::readSerialData);
+
+}
+
+
+void MainWindow::stopSerialConnection()
+{
+    if (serialPort->isOpen()) {
+        serialPort->close();
+        qDebug() << "Serial port stopped.";
+    }
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
-int disconected = 0;
-void MainWindow::pausePlot() {
-    isPaused = true;
-    if(disconnect(serial, &QSerialPort::readyRead, this, &MainWindow::readSerialData))
-    {
-        buffer.clear(); // Xóa bộ đệm khi tạm dừng
-        disconected = 1;
-    }
 
-    qDebug() << "Paused"; // Debug message to confirm pause
-}
-
-void MainWindow::continuePlot() {
-    isPaused = false;
-    if(connect(serial, &QSerialPort::readyRead, this, &MainWindow::readSerialData))
-        disconected = 0;
-    //customPlot->graph(0)->data()->clear(); // Clear data using `clear`
-    lastByteTime = elapsedTimer.elapsed() / 1000.0;
-    qDebug() << "Continued"; // Debug message to confirm continue
-}
-
-int receivedFrequency;
-int receivedDutyCycle;
-int IsFreqAndDutyRead = 0;
-void MainWindow::readSerialData() {
-    const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
-
-    if (buffer.size() < MAX_SIZE) {
-        buffer += serial->readAll();
-    } else {
-        // Xử lý trường hợp mảng đã đầy
-        qDebug() << "Buffer is full!";
-    }
-
-
-    QString strFreq;
-    QString strDuty;
-    double currentTime = elapsedTimer.elapsed() / 1000.0; // Convert to seconds
-
-    while (IsFreqAndDutyRead == 0) {
-        if(buffer[0] == '1' || buffer[0] == '0')
-            break;
-        int indexFreq = buffer.indexOf("F:");
-        int indexDuty = buffer.indexOf("D:");
-
-        // Check if both "F:" and "D:" exist in the buffer
-        if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
-            break; // Break if either "F:" or "D:" are not found or if indexDuty < indexFreq
-        }
-
-        // Find the end of the frequency string
-        int endIndexFreq = buffer.indexOf('\n', indexFreq);
-        if (endIndexFreq == -1) {
-            break; // Incomplete frequency string, exit the loop
-        }
-
-        // Find the end of the duty cycle string
-        int endIndexDuty = buffer.indexOf('\n', indexDuty);
-        if (endIndexDuty == -1) {
-            break; // Incomplete duty cycle string, exit the loop
-        }
-
-        // Extract the frequency and duty cycle values
-        strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
-        strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
-
-        // Convert strings to integers
-        receivedFrequency = strFreq.toInt();
-        receivedDutyCycle = strDuty.toInt();
-
-        qDebug() << "Received Frequency:" << receivedFrequency;
-        qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
-
-        // Remove frequency and duty cycle parts
-        buffer.remove(indexFreq, endIndexFreq - indexFreq + 1);
-        buffer.remove(indexDuty - (endIndexFreq - indexFreq + 1), endIndexDuty - indexDuty + 1);
-        qDebug() << "Plotting data for byte:" << buffer;
-        IsFreqAndDutyRead = 1;
-    }
-    while (!buffer.isEmpty()) {
-        char byte = buffer.at(0);
-        buffer.remove(0, 1); // Remove the processed character from the buffer
-        qDebug() << "Plotting data for byte:" << byte;
-        plotData(currentTime, byte); // Call plotData with currentTime and byte
-    }
-}
-
-
-void MainWindow::plotData(double currentTime, int byte) {
-    double highTime = (1.0 / receivedFrequency) * (receivedDutyCycle / 100.0);
-    double lowTime  = (1.0 / receivedFrequency) * ((100 - receivedDutyCycle) / 100.0);
-    qDebug() << "\nHigh time:" <<  highTime;
-    qDebug() << "\nLow time:" <<  lowTime;
-
-    if (lastByteTime == 0) {
-        lastByteTime = currentTime;
-    }
-
-    if (byte == '1') {
-        qDebug() << "Plotting high state";
-        customPlot->graph(0)->addData(lastByteTime, 0);
-        customPlot->graph(0)->addData(lastByteTime, 1);
-        customPlot->graph(0)->addData(lastByteTime + highTime, 1);
-        lastByteTime += highTime;
-    } else if (byte == '0') {
-        qDebug() << "Plotting low state";
-        customPlot->graph(0)->addData(lastByteTime, 1);
-        customPlot->graph(0)->addData(lastByteTime, 0);
-        customPlot->graph(0)->addData(lastByteTime + lowTime, 0);
-        lastByteTime += lowTime;
-    }
-    else{
-        ;
-    }
-    customPlot->xAxis->setRange(currentTime - 1.5, currentTime + 1);
-    customPlot->replot();
-}
