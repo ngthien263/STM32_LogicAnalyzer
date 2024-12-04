@@ -5,7 +5,15 @@
 #include <QSerialPort>
 #include "qcustomplot.h"
 #include <QElapsedTimer>
-#include <vector>
+#include <QComboBox>
+#include <QPushButton>
+#include <QSerialPort>
+#include <QSerialPortInfo>
+#include <QVBoxLayout>
+#include <QLabel>
+
+class Serial;
+class Plot;
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -16,28 +24,35 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    MainWindow(Serial *serial, Plot *plot, QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
-    void readSerialData();
-    void pausePlot();       // Ensure correct naming
-    void continuePlot();    // Ensure correct naming
-    //void setupTimer();
+    void updateCOMPorts();
+    void startSerialConnection();
+    void stopSerialConnection();
+    void openSerialPort();
+
 private:
     Ui::MainWindow *ui;
     QCustomPlot *customPlot;
-    QSerialPort *serial;
-    QElapsedTimer elapsedTimer;
-    double lastByteTime;
-    bool isZooming;
-    bool isPaused; // Correctly declare isPaused
-    double actX;     // Active X position
-    double timeFrame ; // Time frame for the x-axis
-    bool autorun; // Flag to auto-follow new data
+    Plot *plot;
+    Serial *serial;
+    QSerialPort *serialPort;
+    QByteArray buffer;
 
-    std::vector<std::pair<double, char>> dataBuffer;
-    void plotData(double currentTime, int byte);
+    void setupUI();              // Cài đặt giao diện
+    void setupPlot();            // Cài đặt đồ thị
+
+    QPushButton *startButton;    // Nút bắt đầu
+    QPushButton *stopButton;    // Nút dừng
+    QPushButton *openButton;
+
+    QComboBox *baudrateComboBox; // ComboBox chọn baudrate
+    QComboBox *comPortComboBox;  // ComboBox chọn COM port
+
+    QLabel *frequencyLabel;      // Nhãn hiển thị tần số
+    QLabel *dutyCycleLabel;
 
 };
 

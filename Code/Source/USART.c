@@ -27,8 +27,8 @@ void USART_Init(USART_TypeDef* USARTx, uint32_t BAUD_RATE){
 
 void USART_send(USART_TypeDef *USARTx, unsigned char c)
 {
-				while(!(USARTx->SR & USART_SR_TXE)){;}
-        USARTx->DR = c;
+		while(!(USARTx->SR & USART_SR_TXE)){;}
+		USARTx->DR = c;
 }
 
 void USART_str(USART_TypeDef *USARTx, unsigned char *str)
@@ -43,4 +43,31 @@ unsigned char USART_receive(USART_TypeDef *USARTx)
 {
     while(!(USARTx->SR & USART_SR_RXNE)){;}
     return (char)USARTx->DR;
+}
+
+void USART_receiveString(USART_TypeDef *USARTx, unsigned char *buffer, uint16_t max_size) {
+    uint16_t index = 0;
+
+    // Xóa n?i dung cu trong b? d?m
+    //memset(buffer, 0, max_size);
+
+    while (1) {
+        // Nh?n t?ng ký t? t? UART
+        char received_char = (unsigned char)USART_receive(USARTx);
+
+        // Ki?m tra ký t? k?t thúc
+        if (received_char == '\n') {
+            buffer[index] = '\0'; // Thêm null terminator
+            break;
+        } else {
+            // Luu ký t? vào b? d?m n?u chua d?y
+            if (index < max_size - 1) {
+                buffer[index++] = received_char;
+            } else {
+                // N?u b? d?m d?y, t? d?ng k?t thúc
+                buffer[index] = '\0';
+                break;
+            }
+        }
+    }
 }

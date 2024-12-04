@@ -15,7 +15,7 @@ volatile int Duty = 0;				// Input Duty Cycle
 uint32_t old_freq = 0;
 uint32_t old_duty = 0;
 volatile int stringSent = 0; // Flag to check if the frequency and duty cycle string has been sent
-volatile int update = 0; 		 // Flag to indicate if the frequency and duty cycle need to be updated
+volatile int update = 1; 		 // Flag to indicate if the frequency and duty cycle need to be updated
 
 //Configure USART1
 void USART1_Config(uint32_t BAUD_RATE);
