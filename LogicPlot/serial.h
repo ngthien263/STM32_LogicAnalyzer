@@ -10,8 +10,6 @@
 #include <QLabel>
 #include "qcustomplot.h"
 
-
-
 class Plot;
 
 class Serial : public QObject {
@@ -23,8 +21,6 @@ private:
     Plot *plot;
     QCustomPlot *customPlot;
     QByteArray buffer;
-
-
     int receivedFrequency;
     int receivedDutyCycle;
     int IsFreqAndDutyRead = 0;
@@ -35,25 +31,25 @@ private:
 public:
     explicit Serial(QObject *parent = nullptr);
 
-
     void setPlot(Plot *plotObj);
-
     QElapsedTimer getElapsedTimer() const;
     void updateFrequencyAndDuty(int frequency, int dutyCycle);
-
 
     // Getter and Setter for QSerialPort
     QSerialPort* getSerial() const;
     void setSerial(QSerialPort* port);
     QByteArray getBuffer() const;
 
-public slots:
-
-    void readSerialData(QSerialPort *serial);
-    bool setupSerialPort(QSerialPort *serialPort, const QString &portName, int baudRate);
-
+    // Getter không cần đánh dấu là slot
     int getFrequency() const;
     int getDutyCycle() const;
+
+public slots:
+    //void readSerialData(QSerialPort *serial);
+    bool setupSerialPort(QSerialPort *serialPort, const QString &portName, int baudRate);
+
+    // Hàm thử nghiệm
+    //void testReadSerialData();
 };
 
 #endif // SERIAL_H

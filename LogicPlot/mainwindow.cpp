@@ -15,12 +15,10 @@ MainWindow::MainWindow(Serial *serial, Plot *plot, QWidget *parent)
     , buffer()
 {
     ui->setupUi(this);
-
-    serial->setPlot(plot);
-    plot->setSerial(serial);
-
     setupUI();
     setupPlot();
+    serial->setPlot(plot);
+    plot->setSerial(serial);
 }
 
 void MainWindow::setupUI()
@@ -33,22 +31,8 @@ void MainWindow::setupUI()
     QVBoxLayout *layout = new QVBoxLayout();
     QWidget *widget = new QWidget();
     widget->setLayout(layout);
-
-    // Create and add pause and continue buttons
-    // QPushButton *pauseButton = new QPushButton("Pause", this);
-    // QPushButton *continueButton = new QPushButton("Continue", this);
     layout->addWidget(customPlot);
-    // layout->addWidget(pauseButton);
-    // layout->addWidget(continueButton);
-
-    // Set widget as central widget
-    //setCentralWidget(widget);
-
-    // Connect button signals to slots
-    // connect(pauseButton, &QPushButton::clicked, plot, &Plot::pausePlot);
-    // connect(continueButton, &QPushButton::clicked, plot, &Plot::continuePlot);
-
-    // Menu bên phải
+     // Menu bên phải
     QVBoxLayout *menuLayout = new QVBoxLayout();
     QLabel *menuLabel = new QLabel("Menu", this);
     menuLayout->addWidget(menuLabel);
@@ -155,6 +139,86 @@ void MainWindow::updateCOMPorts()
         comPortComboBox->setEnabled(true); // Kích hoạt ComboBox nếu có cổng
     }
 }
+int IsFreqAndDutyRead;
+int receivedFrequency;
+int  receivedDutyCycle;
+void MainWindow::readSerialData(QSerialPort *serialPort) {
+
+    const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
+
+    if (buffer.size() < MAX_SIZE) {
+        buffer += serialPort->readAll();
+    } else {
+        // Xử lý trường hợp mảng đã đầy
+        qDebug() << "Buffer is full!";
+        buffer.clear(); // Xóa sạch dữ liệu trong buffer
+        buffer += serialPort->readAll();
+    }
+
+    QString strFreq;
+    QString strDuty;
+
+    // Convert to seconds
+
+    while (IsFreqAndDutyRead == 0) {
+        qDebug() << "Entered loop, buffer:" << buffer;
+
+        if (buffer[0] == '1' || buffer[0] == '0') {
+            qDebug() << "Condition buffer[0] == '1' || buffer[0] == '0' met, breaking loop.";
+            break;
+        }
+
+        int indexFreq = buffer.indexOf("F:");
+        int indexDuty = buffer.indexOf("D:");
+        qDebug() << "indexFreq:" << indexFreq << ", indexDuty:" << indexDuty;
+
+        if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
+            qDebug() << "Condition indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq met, breaking loop.";
+            break;
+        }
+
+        int endIndexFreq = buffer.indexOf('\n', indexFreq);
+        if (endIndexFreq == -1) {
+            qDebug() << "Incomplete frequency string, breaking loop.";
+            break;
+        }
+
+        int endIndexDuty = buffer.indexOf('\n', indexDuty);
+        if (endIndexDuty == -1) {
+            qDebug() << "Incomplete duty cycle string, breaking loop.";
+            break;
+        }
+
+        strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
+        strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
+
+        qDebug() << "Extracted Frequency:" << strFreq << ", Duty Cycle:" << strDuty;
+
+        if (!strFreq.isEmpty() && !strDuty.isEmpty()) {
+            receivedFrequency = strFreq.toInt();
+            receivedDutyCycle = strDuty.toInt();
+        } else {
+            qDebug() << "Failed to extract frequency or duty cycle!";
+        }
+
+        //serial->updateFrequencyAndDuty(receivedFrequency, receivedDutyCycle);
+
+        qDebug() << "Received Frequency:" << receivedFrequency;
+        qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
+        buffer.remove(indexFreq, endIndexFreq - indexFreq + 1);
+        buffer.remove(indexDuty - (endIndexFreq - indexFreq + 1), endIndexDuty - indexDuty + 1);
+        qDebug() << "Plotting data for byte:" << buffer;
+        IsFreqAndDutyRead = 1;
+        qDebug() << "Plotting data for byte:" << buffer;
+    }
+    qDebug() << "Plotting data for byte:" << buffer;
+    if (IsFreqAndDutyRead == 1) {
+        double currentTime = elapsedTimer.elapsed() / 1000.0;
+        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle);
+    } else {
+        qDebug() << "Plot object is null!";
+    }
+}
 
 void MainWindow::startSerialConnection()
 {
@@ -191,7 +255,7 @@ void MainWindow::startSerialConnection()
     });
 
     // Kết nối tín hiệu readyRead để xử lý dữ liệu nhận được
-        serial->readSerialData(serialPort);
+        readSerialData(serialPort);
 }
 
 
@@ -207,7 +271,10 @@ void MainWindow::openSerialPort()
     int baudRate = baudrateComboBox->currentText().toInt();
 
     serial->setupSerialPort(serialPort, portName, baudRate);
-    connect(serialPort, &QSerialPort::readyRead, serial, &Serial::readSerialData);
+    connect(serialPort, &QSerialPort::readyRead, this, [=]() {
+        readSerialData(serialPort);
+    });
+
 
 }
 

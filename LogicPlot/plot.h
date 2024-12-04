@@ -36,6 +36,8 @@ public:
 
     void plotData(QCustomPlot *customPlot, QByteArray &buffer, double currentTime, int receivedFrequency, int receivedDutyCycle);
 
+    QCustomPlot* setupPlot();
+
 public slots:
     //void pausePlot();       // Ensure correct naming
     //void continuePlot();    // Ensure correct naming

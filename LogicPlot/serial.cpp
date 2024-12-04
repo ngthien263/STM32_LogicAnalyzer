@@ -41,78 +41,85 @@ void Serial::setSerial(QSerialPort* port) {
     serial = port;
 }
 
-void Serial::readSerialData(QSerialPort *serialPort) {
+// void Serial::readSerialData(QSerialPort *serialPort) {
 
-    const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
+//     const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
 
-    if (buffer.size() < MAX_SIZE) {
-        buffer += serialPort->readAll();
-    } else {
-        // Xử lý trường hợp mảng đã đầy
-        qDebug() << "Buffer is full!";
-        buffer.clear(); // Xóa sạch dữ liệu trong buffer
-        buffer += serialPort->readAll();
-    }
+//     if (buffer.size() < MAX_SIZE) {
+//         buffer += serialPort->readAll();
+//     } else {
+//         // Xử lý trường hợp mảng đã đầy
+//         qDebug() << "Buffer is full!";
+//         buffer.clear(); // Xóa sạch dữ liệu trong buffer
+//         buffer += serialPort->readAll();
+//     }
 
-    QString strFreq;
-    QString strDuty;
+//     QString strFreq;
+//     QString strDuty;
 
-    // Convert to seconds
+//     // Convert to seconds
 
-    while (IsFreqAndDutyRead == 0) {
+//     while (IsFreqAndDutyRead == 0) {
+//         qDebug() << "Entered loop, buffer:" << buffer;
 
-        if(buffer[0] == '1' || buffer[0] == '0')
-            break;
-        int indexFreq = buffer.indexOf("F:");
-        int indexDuty = buffer.indexOf("D:");
+//         if (buffer[0] == '1' || buffer[0] == '0') {
+//             qDebug() << "Condition buffer[0] == '1' || buffer[0] == '0' met, breaking loop.";
+//             break;
+//         }
 
-        // Check if both "F:" and "D:" exist in the buffer
-        if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
-            break; // Break if either "F:" or "D:" are not found or if indexDuty < indexFreq
-        }
+//         int indexFreq = buffer.indexOf("F:");
+//         int indexDuty = buffer.indexOf("D:");
+//         qDebug() << "indexFreq:" << indexFreq << ", indexDuty:" << indexDuty;
 
-        // Find the end of the frequency string
-        int endIndexFreq = buffer.indexOf('\n', indexFreq);
-        if (endIndexFreq == -1) {
-            break; // Incomplete frequency string, exit the loop
-        }
+//         if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
+//             qDebug() << "Condition indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq met, breaking loop.";
+//             break;
+//         }
 
-        // Find the end of the duty cycle string
-        int endIndexDuty = buffer.indexOf('\n', indexDuty);
-        if (endIndexDuty == -1) {
-            break; // Incomplete duty cycle string, exit the loop
-        }
+//         int endIndexFreq = buffer.indexOf('\n', indexFreq);
+//         if (endIndexFreq == -1) {
+//             qDebug() << "Incomplete frequency string, breaking loop.";
+//             break;
+//         }
 
-        // Extract the frequency and duty cycle values
-        strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
-        strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
+//         int endIndexDuty = buffer.indexOf('\n', indexDuty);
+//         if (endIndexDuty == -1) {
+//             qDebug() << "Incomplete duty cycle string, breaking loop.";
+//             break;
+//         }
 
-        // Convert strings to integers
-        if (!strFreq.isEmpty() && !strDuty.isEmpty()) {
-            receivedFrequency = strFreq.toInt();
-            receivedDutyCycle = strDuty.toInt();
-        } else {
-            qDebug() << "Failed to extract frequency or duty cycle!";
-        }
-        updateFrequencyAndDuty(receivedFrequency, receivedDutyCycle);
+//         strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
+//         strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
 
-        qDebug() << "Received Frequency:" << receivedFrequency;
-        qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
+//         qDebug() << "Extracted Frequency:" << strFreq << ", Duty Cycle:" << strDuty;
 
-        // Remove frequency and duty cycle parts
-        buffer.remove(indexFreq, endIndexFreq - indexFreq + 1);
-        buffer.remove(indexDuty - (endIndexFreq - indexFreq + 1), endIndexDuty - indexDuty + 1);
+//         if (!strFreq.isEmpty() && !strDuty.isEmpty()) {
+//             receivedFrequency = strFreq.toInt();
+//             receivedDutyCycle = strDuty.toInt();
+//         } else {
+//             qDebug() << "Failed to extract frequency or duty cycle!";
+//         }
 
-        qDebug() << "Plotting data for byte:" << buffer;
-        IsFreqAndDutyRead = 1;
-    }
-    if (plot && IsFreqAndDutyRead == 1) {
-        double currentTime = elapsedTimer.elapsed() / 1000.0;
-        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle);
-    } else {
-        qDebug() << "Plot object is null!";
-    }
-}
+//         updateFrequencyAndDuty(receivedFrequency, receivedDutyCycle);
+
+//         qDebug() << "Received Frequency:" << receivedFrequency;
+//         qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
+//         buffer.remove(indexFreq, endIndexFreq - indexFreq + 1);
+//         buffer.remove(indexDuty - (endIndexFreq - indexFreq + 1), endIndexDuty - indexDuty + 1);
+//         qDebug() << "Plotting data for byte:" << buffer;
+//         IsFreqAndDutyRead = 1;
+//         qDebug() << "Plotting data for byte:" << buffer;
+//     }
+//     qDebug() << "Plotting data for byte:" << buffer;
+//     customPlot = new QCustomPlot;
+//     customPlot->graph(0);
+//     if (IsFreqAndDutyRead == 1) {
+//         double currentTime = elapsedTimer.elapsed() / 1000.0;
+//         plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle);
+//     } else {
+//         qDebug() << "Plot object is null!";
+//     }
+// }
 bool Serial::setupSerialPort(QSerialPort *serialPort, const QString &portName, int baudRate)
 {
     // Đảm bảo đối tượng QSerialPort không null
@@ -148,6 +155,6 @@ void Serial::updateFrequencyAndDuty(int frequency, int dutyCycle)
     QString freqText = QString("Frequency: %1 Hz").arg(frequency);
     QString dutyText = QString("Duty Cycle: %1%").arg(dutyCycle);
 
-    frequencyLabel->setText(freqText); // Cập nhật nhãn Frequency
-    dutyCycleLabel->setText(dutyText); // Cập nhật nhãn Duty Cycle
+    //frequencyLabel->setText(freqText); // Cập nhật nhãn Frequency
+    //dutyCycleLabel->setText(dutyText); // Cập nhật nhãn Duty Cycle
 }

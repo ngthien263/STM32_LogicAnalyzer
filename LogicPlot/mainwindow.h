@@ -26,21 +26,20 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(Serial *serial, Plot *plot, QWidget *parent = nullptr);
     ~MainWindow();
-
+    QCustomPlot *customPlot;
 private slots:
     void updateCOMPorts();
     void startSerialConnection();
     void stopSerialConnection();
     void openSerialPort();
-
+    void readSerialData(QSerialPort *serialPort);
 private:
     Ui::MainWindow *ui;
-    QCustomPlot *customPlot;
     Plot *plot;
     Serial *serial;
     QSerialPort *serialPort;
     QByteArray buffer;
-
+    QElapsedTimer elapsedTimer; // Add this line
     void setupUI();              // Cài đặt giao diện
     void setupPlot();            // Cài đặt đồ thị
 
