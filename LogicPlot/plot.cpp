@@ -53,8 +53,6 @@ void Plot::plotData(QCustomPlot *customPlot, QByteArray &buffer, double &current
         qDebug() << "customPlot hoặc customPlot->graph(0) là null, thoát hàm.";
         return;
     }
-
-
     while (!buffer.isEmpty()) {
         lastByte = buffer.at(0); // Lấy byte đầu tiên
         buffer.remove(0, 1); // Xóa byte đầu tiên khỏi buffer
@@ -74,14 +72,14 @@ void Plot::plotData(QCustomPlot *customPlot, QByteArray &buffer, double &current
             lastByteTime += lowTime;
         } else {
             qDebug() << "Giá trị byte không hợp lệ:" << lastByte;
+            IsFreqAndDutyRead = 0;
         }
     }
 
     // Điều chỉnh phạm vi trục x để phản ánh thời gian hiện tại
-    customPlot->xAxis->setRange(lastByteTime - 1, lastByteTime + 1);
+    customPlot->xAxis->setRange(lastByteTime - highTime - lowTime, lastByteTime + highTime + lowTime);
     customPlot->replot();
 }
-
 
 
 

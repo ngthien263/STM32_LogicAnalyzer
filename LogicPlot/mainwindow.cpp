@@ -34,7 +34,7 @@ void MainWindow::setupUI()
     QWidget *widget = new QWidget();
     widget->setLayout(layout);
     layout->addWidget(customPlot);
-     // Menu bên phải
+        // Menu bên phải
     QVBoxLayout *menuLayout = new QVBoxLayout();
     QLabel *menuLabel = new QLabel("Menu", this);
     menuLayout->addWidget(menuLabel);
@@ -102,29 +102,56 @@ void MainWindow::setupUI()
     connect(stopButton, &QPushButton::clicked, this, &MainWindow::stopSerialConnection);
 }
 
-void MainWindow::setupPlot()
-{
-    // Set up the QCustomPlot
-    //setCentralWidget(customPlot);
-    customPlot->addGraph();
-    customPlot->graph(0)->setPen(QPen(Qt::red));
-    customPlot->xAxis->setLabel("Times");
-    customPlot->yAxis->setLabel("Signal");
-    customPlot->xAxis->setRange(5, 10);
-    customPlot->yAxis->setRange(-2, 5);
+void MainWindow::setupPlot() {
+    customPlot->plotLayout()->clear(); // Xóa các phần tử cũ nếu có
 
-    // Enable zooming and panning
+    // Tạo Channel 1
+    QCPAxisRect *axisRect1 = new QCPAxisRect(customPlot);
+    customPlot->plotLayout()->addElement(0, 0, axisRect1);
+    QCPGraph *graph1 = customPlot->addGraph(axisRect1->axis(QCPAxis::atBottom), axisRect1->axis(QCPAxis::atLeft));
+    graph1->setPen(QPen(Qt::red));
+    axisRect1->axis(QCPAxis::atBottom)->setLabel("Channel 1");
+    axisRect1->setupFullAxesBox(true);
+
+    // Tạo Channel 2
+    QCPAxisRect *axisRect2 = new QCPAxisRect(customPlot);
+    customPlot->plotLayout()->addElement(1, 0, axisRect2);
+    QCPGraph *graph2 = customPlot->addGraph(axisRect2->axis(QCPAxis::atBottom), axisRect2->axis(QCPAxis::atLeft));
+    graph2->setPen(QPen(Qt::green));
+    axisRect2->axis(QCPAxis::atBottom)->setLabel("Channel 2");
+    axisRect2->setupFullAxesBox(true);
+
+    // Tạo Channel 3
+    QCPAxisRect *axisRect3 = new QCPAxisRect(customPlot);
+    customPlot->plotLayout()->addElement(2, 0, axisRect3);
+    QCPGraph *graph3 = customPlot->addGraph(axisRect3->axis(QCPAxis::atBottom), axisRect3->axis(QCPAxis::atLeft));
+    graph3->setPen(QPen(Qt::blue));
+    axisRect3->axis(QCPAxis::atBottom)->setLabel("Channel 3");
+    axisRect3->setupFullAxesBox(true);
+
+    axisRect1->axis(QCPAxis::atLeft)->setRange(-0.2, 1.2);
+    axisRect2->axis(QCPAxis::atLeft)->setRange(-0.2, 1.2);
+    axisRect3->axis(QCPAxis::atLeft)->setRange(-0.2, 1.2);
+    axisRect1->axis(QCPAxis::atBottom)->setRange(0, 5);
+    axisRect2->axis(QCPAxis::atBottom)->setRange(0, 5);
+    axisRect3->axis(QCPAxis::atBottom)->setRange(0, 5);
+
+    // Bật tính năng phóng to và kéo thả cho từng axis rect, chỉ theo trục x
+    axisRect1->setRangeZoom(Qt::Horizontal);
+    axisRect1->setRangeDrag(Qt::Horizontal);
+    axisRect2->setRangeZoom(Qt::Horizontal);
+    axisRect2->setRangeDrag(Qt::Horizontal);
+    axisRect3->setRangeZoom(Qt::Horizontal);
+    axisRect3->setRangeDrag(Qt::Horizontal);
+
     customPlot->setInteraction(QCP::iRangeZoom, true);
     customPlot->setInteraction(QCP::iRangeDrag, true);
-    customPlot->axisRect()->setRangeZoom(Qt::Horizontal); // Only allow zooming on x-axis
-    customPlot->axisRect()->setRangeDrag(Qt::Horizontal); // Only allow dragging on x-axis
-    //customPlot->xAxis->setTickLabels(false);
-    // Thiết lập chế độ vẽ nhanh hơn
-    customPlot->setNotAntialiasedElements(QCP::aeAll); // Tắt khử răng cưa để tăng hiệu suất
-    QPen pen;
-    pen.setWidthF(3); // Đặt độ dày nét vẽ nhỏ để vẽ nhanh hơn
-    customPlot->graph(0)->setPen(pen);
+
+    // Tắt khử răng cưa để tăng hiệu suất
+    customPlot->setNotAntialiasedElements(QCP::aeAll);
 }
+
+
 
 void MainWindow::updateCOMPorts()
 {
@@ -203,7 +230,7 @@ void MainWindow::readSerialData(QSerialPort *serialPort) {
             qDebug() << "Failed to extract frequency or duty cycle!";
         }
 
-        //serial->updateFrequencyAndDuty(receivedFrequency, receivedDutyCycle);
+        serial->updateFrequencyAndDuty(receivedFrequency, receivedDutyCycle);
 
         qDebug() << "Received Frequency:" << receivedFrequency;
         qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
@@ -258,10 +285,8 @@ void MainWindow::startSerialConnection()
     });
 
     // Kết nối tín hiệu readyRead để xử lý dữ liệu nhận được
-        readSerialData(serialPort);
+    readSerialData(serialPort);
 }
-
-
 
 void MainWindow::openSerialPort()
 {
@@ -284,8 +309,6 @@ void MainWindow::openSerialPort()
     });
 }
 
-
-
 void MainWindow::stopSerialConnection()
 {
     if (serialPort->isOpen()) {
@@ -299,4 +322,3 @@ MainWindow::~MainWindow()
 {
     delete ui;
 }
-
