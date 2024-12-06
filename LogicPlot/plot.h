@@ -5,7 +5,7 @@
 #include <QElapsedTimer>
 #include <QDebug>
 #include "qcustomplot.h"
-
+#include "mainwindow.h"
 class Serial;
 
 class Plot : public QObject{

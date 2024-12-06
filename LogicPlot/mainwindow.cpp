@@ -4,6 +4,7 @@
 #include <QElapsedTimer>
 #include "serial.h"
 #include "plot.h"
+int MainWindow::IsFreqAndDutyRead = 0;
 
 MainWindow::MainWindow(Serial *serial, Plot *plot, QWidget *parent)
     : QMainWindow(parent)
@@ -168,11 +169,10 @@ void MainWindow::updateCOMPorts()
         comPortComboBox->setEnabled(true); // Kích hoạt ComboBox nếu có cổng
     }
 }
-int IsFreqAndDutyRead = 0;
+
 int receivedFrequency;
 int  receivedDutyCycle;
 void MainWindow::readSerialData(QSerialPort *serialPort) {
-
     const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
 
     if (buffer.size() < MAX_SIZE) {
@@ -188,12 +188,20 @@ void MainWindow::readSerialData(QSerialPort *serialPort) {
     QString strDuty;
 
     // Convert to seconds
+    qDebug() << "Entered loop, buffer:" << buffer;
+    qDebug() << "IsFreqAndDutyRead: " << IsFreqAndDutyRead;
+
+    // Reset IsFreqAndDutyRead when 'N' is encountered
+    if (buffer.contains('N')) {
+        qDebug() << "'N' encountered, resetting IsFreqAndDutyRead";
+        IsFreqAndDutyRead = 0;
+        buffer.remove(0, buffer.indexOf('N') + 1); // Remove 'N' and preceding characters
+    }
 
     while (IsFreqAndDutyRead == 0) {
-        qDebug() << "Entered loop, buffer:" << buffer;
-
-        if (buffer[0] == '1' || buffer[0] == '0') {
-            qDebug() << "Condition buffer[0] == '1' || buffer[0] == '0' met, breaking loop.";
+        if (buffer.startsWith('1') || buffer.startsWith('0')) {
+            IsFreqAndDutyRead = 0;
+            qDebug() << "Condition buffer.startsWith('1') || buffer.startsWith('0') met, breaking loop.";
             break;
         }
 
@@ -202,6 +210,7 @@ void MainWindow::readSerialData(QSerialPort *serialPort) {
         qDebug() << "indexFreq:" << indexFreq << ", indexDuty:" << indexDuty;
 
         if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
+            IsFreqAndDutyRead = 0;
             qDebug() << "Condition indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq met, breaking loop.";
             break;
         }
@@ -230,25 +239,20 @@ void MainWindow::readSerialData(QSerialPort *serialPort) {
             qDebug() << "Failed to extract frequency or duty cycle!";
         }
 
-        serial->updateFrequencyAndDuty(receivedFrequency, receivedDutyCycle);
-
         qDebug() << "Received Frequency:" << receivedFrequency;
         qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
-        buffer.remove(indexFreq, endIndexFreq - indexFreq + 1);
-        buffer.remove(indexDuty - (endIndexFreq - indexFreq + 1), endIndexDuty - indexDuty + 1);
-        qDebug() << "Plotting data for byte:" << buffer;
+        buffer.remove(0, endIndexDuty + 1); // Xóa cả chuỗi đã xử lý khỏi buffer
+        updateTimeFlag = 1;
         IsFreqAndDutyRead = 1;
-        qDebug() << "Plotting data for byte:" << buffer;
+        break; // Thoát khỏi vòng lặp sau khi xử lý xong chuỗi F và D
     }
 
-    qDebug() << "Plotting data for byte:" << buffer;
     if (IsFreqAndDutyRead == 1) {
         currentTime = elapsedTimer.elapsed() / 1000.0;
         plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
-    } else {
-        qDebug() << "Plot object is null!";
     }
 }
+
 
 void MainWindow::startSerialConnection()
 {
@@ -306,7 +310,8 @@ void MainWindow::openSerialPort()
         currentTime = elapsedTimer.elapsed() / 1000.0; // Cập nhật currentTime ở đây
         plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
         readSerialData(serialPort);
-    });
+    }
+    );
 }
 
 void MainWindow::stopSerialConnection()

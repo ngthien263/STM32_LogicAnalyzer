@@ -40,9 +40,7 @@ QCustomPlot* Plot::setupPlot()
 }
 void Plot::plotData(QCustomPlot *customPlot, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag) {
     double highTime = (1.0 / receivedFrequency) * (receivedDutyCycle / 100.0);
-    double lowTime  = (1.0 / receivedFrequency) * ((100 - receivedDutyCycle) / 100.0);
-    qDebug() << "\nHigh time:" << highTime;
-    qDebug() << "\nLow time:" << lowTime;
+    double lowTime = (1.0 / receivedFrequency) * ((100 - receivedDutyCycle) / 100.0);
 
     if (lastByteTime == 0.0 || lastByteTime < 0 || updateTimeFlag == 1) {
         updateTimeFlag = 0;
@@ -53,26 +51,30 @@ void Plot::plotData(QCustomPlot *customPlot, QByteArray &buffer, double &current
         qDebug() << "customPlot hoặc customPlot->graph(0) là null, thoát hàm.";
         return;
     }
+
     while (!buffer.isEmpty()) {
-        lastByte = buffer.at(0); // Lấy byte đầu tiên
+        char lastByte = buffer.at(0); // Lấy byte đầu tiên
         buffer.remove(0, 1); // Xóa byte đầu tiên khỏi buffer
         qDebug() << "Đang xử lý byte:" << lastByte;
 
         if (lastByte == '1') {
-            qDebug() << "Đang vẽ trạng thái high" << lastByte;
             customPlot->graph(0)->addData(lastByteTime, 0);
             customPlot->graph(0)->addData(lastByteTime, 1);
-            customPlot->graph(0)->addData(lastByteTime + highTime, 1);
             lastByteTime += highTime;
+            customPlot->graph(0)->addData(lastByteTime, 1);
         } else if (lastByte == '0') {
-            qDebug() << "Đang vẽ trạng thái low" << lastByte;
             customPlot->graph(0)->addData(lastByteTime, 1);
             customPlot->graph(0)->addData(lastByteTime, 0);
-            customPlot->graph(0)->addData(lastByteTime + lowTime, 0);
             lastByteTime += lowTime;
+            customPlot->graph(0)->addData(lastByteTime, 0);
+        } else if (lastByte == 'N') {
+            qDebug() << "'N' encountered, resetting IsFreqAndDutyRead" << lastByte;
+            MainWindow::IsFreqAndDutyRead = 0;
+            break;
         } else {
             qDebug() << "Giá trị byte không hợp lệ:" << lastByte;
-            IsFreqAndDutyRead = 0;
+            MainWindow::IsFreqAndDutyRead = 0;
+            break;
         }
     }
 

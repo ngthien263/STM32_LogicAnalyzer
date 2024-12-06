@@ -27,6 +27,7 @@ public:
     MainWindow(Serial *serial, Plot *plot, QWidget *parent = nullptr);
     ~MainWindow();
     QCustomPlot *customPlot;
+    static int IsFreqAndDutyRead;
 private slots:
     void updateCOMPorts();
     void startSerialConnection();
