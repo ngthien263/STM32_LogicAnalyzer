@@ -5,7 +5,11 @@
 #include "serial.h"
 #include "plot.h"
 int MainWindow::IsFreqAndDutyRead = 0;
-
+int MainWindow::IsFreqAndDutyRead_ch1 = 0;
+int MainWindow::IsFreqAndDutyRead_ch2 = 0;
+QCPGraph* MainWindow::graph1 = nullptr;
+QCPGraph* MainWindow::graph2 = nullptr;
+QCPGraph* MainWindow::graph3 = nullptr;
 MainWindow::MainWindow(Serial *serial, Plot *plot, QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -24,6 +28,16 @@ MainWindow::MainWindow(Serial *serial, Plot *plot, QWidget *parent)
 }
 double currentTime;
 int updateTimeFlag = 0;
+
+typedef struct
+{
+    int Freq;
+    int Duty;
+} FreqAndDuty_typedef;
+
+FreqAndDuty_typedef Channel1FD;
+FreqAndDuty_typedef Channel2FD;
+FreqAndDuty_typedef channelFreqAndDuty[2] = {};
 void MainWindow::setupUI()
 {
     // Tạo các widget
@@ -109,7 +123,7 @@ void MainWindow::setupPlot() {
     // Tạo Channel 1
     QCPAxisRect *axisRect1 = new QCPAxisRect(customPlot);
     customPlot->plotLayout()->addElement(0, 0, axisRect1);
-    QCPGraph *graph1 = customPlot->addGraph(axisRect1->axis(QCPAxis::atBottom), axisRect1->axis(QCPAxis::atLeft));
+    graph1 = customPlot->addGraph(axisRect1->axis(QCPAxis::atBottom), axisRect1->axis(QCPAxis::atLeft));
     graph1->setPen(QPen(Qt::red));
     axisRect1->axis(QCPAxis::atBottom)->setLabel("Channel 1");
     axisRect1->setupFullAxesBox(true);
@@ -117,7 +131,7 @@ void MainWindow::setupPlot() {
     // Tạo Channel 2
     QCPAxisRect *axisRect2 = new QCPAxisRect(customPlot);
     customPlot->plotLayout()->addElement(1, 0, axisRect2);
-    QCPGraph *graph2 = customPlot->addGraph(axisRect2->axis(QCPAxis::atBottom), axisRect2->axis(QCPAxis::atLeft));
+    graph2 = customPlot->addGraph(axisRect2->axis(QCPAxis::atBottom), axisRect2->axis(QCPAxis::atLeft));
     graph2->setPen(QPen(Qt::green));
     axisRect2->axis(QCPAxis::atBottom)->setLabel("Channel 2");
     axisRect2->setupFullAxesBox(true);
@@ -125,7 +139,7 @@ void MainWindow::setupPlot() {
     // Tạo Channel 3
     QCPAxisRect *axisRect3 = new QCPAxisRect(customPlot);
     customPlot->plotLayout()->addElement(2, 0, axisRect3);
-    QCPGraph *graph3 = customPlot->addGraph(axisRect3->axis(QCPAxis::atBottom), axisRect3->axis(QCPAxis::atLeft));
+    graph3 = customPlot->addGraph(axisRect3->axis(QCPAxis::atBottom), axisRect3->axis(QCPAxis::atLeft));
     graph3->setPen(QPen(Qt::blue));
     axisRect3->axis(QCPAxis::atBottom)->setLabel("Channel 3");
     axisRect3->setupFullAxesBox(true);
@@ -172,129 +186,165 @@ void MainWindow::updateCOMPorts()
 
 int receivedFrequency;
 int  receivedDutyCycle;
+// void MainWindow::readSerialData(QSerialPort *serialPort) {
+//     const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
+
+//     if (buffer.size() < MAX_SIZE) {
+//         buffer += serialPort->readAll();
+//     } else {
+//         // Xử lý trường hợp mảng đã đầy
+//         qDebug() << "Buffer is full!";
+//         buffer.clear(); // Xóa sạch dữ liệu trong buffer
+//         buffer += serialPort->readAll();
+//     }
+
+//     QString strFreq;
+//     QString strDuty;
+
+//     // Convert to seconds
+//     qDebug() << "Entered loop, buffer:" << buffer;
+//     qDebug() << "IsFreqAndDutyRead: " << IsFreqAndDutyRead;
+
+//     // Reset IsFreqAndDutyRead when 'N' is encountered
+//     if (buffer.contains('N')) {
+//         qDebug() << "'N' encountered, resetting IsFreqAndDutyRead";
+//         IsFreqAndDutyRead = 0;
+//         buffer.remove(0, buffer.indexOf('N') + 1); // Remove 'N' and preceding characters
+//     }
+
+//     while (IsFreqAndDutyRead == 0) {
+//         if (buffer.startsWith('1') || buffer.startsWith('0')) {
+//             IsFreqAndDutyRead = 0;
+//             qDebug() << "Condition buffer.startsWith('1') || buffer.startsWith('0') met, breaking loop.";
+//             break;
+//         }
+
+//         int indexFreq = buffer.indexOf("F:");
+//         int indexDuty = buffer.indexOf("D:");
+//         qDebug() << "indexFreq:" << indexFreq << ", indexDuty:" << indexDuty;
+
+//         if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
+//             IsFreqAndDutyRead = 0;
+//             qDebug() << "Condition indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq met, breaking loop.";
+//             break;
+//         }
+
+//         int endIndexFreq = buffer.indexOf('\n', indexFreq);
+//         if (endIndexFreq == -1) {
+//             qDebug() << "Incomplete frequency string, breaking loop.";
+//             break;
+//         }
+
+//         int endIndexDuty = buffer.indexOf('\n', indexDuty);
+//         if (endIndexDuty == -1) {
+//             qDebug() << "Incomplete duty cycle string, breaking loop.";
+//             break;
+//         }
+
+//         strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
+//         strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
+
+//         qDebug() << "Extracted Frequency:" << strFreq << ", Duty Cycle:" << strDuty;
+
+//         if (!strFreq.isEmpty() && !strDuty.isEmpty()) {
+//             receivedFrequency = strFreq.toInt();
+//             receivedDutyCycle = strDuty.toInt();
+//         } else {
+//             qDebug() << "Failed to extract frequency or duty cycle!";
+//         }
+
+//         qDebug() << "Received Frequency:" << receivedFrequency;
+//         qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
+//         buffer.remove(0, endIndexDuty + 1); // Xóa cả chuỗi đã xử lý khỏi buffer
+//         updateTimeFlag = 1;
+//         IsFreqAndDutyRead = 1;
+//         break; // Thoát khỏi vòng lặp sau khi xử lý xong chuỗi F và D
+//     }
+
+//     if (IsFreqAndDutyRead == 1) {
+//         currentTime = elapsedTimer.elapsed() / 1000.0;
+//         plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
+//     }
+// }
+
 void MainWindow::readSerialData(QSerialPort *serialPort) {
     const int MAX_SIZE = 1000; // Giới hạn kích thước tối đa
 
     if (buffer.size() < MAX_SIZE) {
         buffer += serialPort->readAll();
     } else {
-        // Xử lý trường hợp mảng đã đầy
-        qDebug() << "Buffer is full!";
-        buffer.clear(); // Xóa sạch dữ liệu trong buffer
+        qDebug() << "Buffer is full! Removing oldest data.";
+        buffer.remove(0, buffer.size() / 2); // Xóa một nửa dữ liệu cũ
         buffer += serialPort->readAll();
     }
 
-    QString strFreq;
-    QString strDuty;
-
-    // Convert to seconds
-    qDebug() << "Entered loop, buffer:" << buffer;
-    qDebug() << "IsFreqAndDutyRead: " << IsFreqAndDutyRead;
-
-    // Reset IsFreqAndDutyRead when 'N' is encountered
     if (buffer.contains('N')) {
         qDebug() << "'N' encountered, resetting IsFreqAndDutyRead";
-        IsFreqAndDutyRead = 0;
+        //IsFreqAndDutyRead = 0;
         buffer.remove(0, buffer.indexOf('N') + 1); // Remove 'N' and preceding characters
+        int indexChannel = buffer.indexOf("C");
+        if (buffer.at(indexChannel + 1) == '1'){
+            getFreqandDuty(1);
+        }
+        else if (buffer.at(indexChannel + 1) == '2'){
+            getFreqandDuty(2);
+        }
     }
-
-    while (IsFreqAndDutyRead == 0) {
-        if (buffer.startsWith('1') || buffer.startsWith('0')) {
-            IsFreqAndDutyRead = 0;
-            qDebug() << "Condition buffer.startsWith('1') || buffer.startsWith('0') met, breaking loop.";
+    while (!buffer.isEmpty()) {
+        if (buffer.at(0) == 'N') {
+            qDebug() << "'N' encountered, resetting IsFreqAndDutyRead in plot loop";
             break;
         }
-
-        int indexFreq = buffer.indexOf("F:");
-        int indexDuty = buffer.indexOf("D:");
-        qDebug() << "indexFreq:" << indexFreq << ", indexDuty:" << indexDuty;
-
-        if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
-            IsFreqAndDutyRead = 0;
-            qDebug() << "Condition indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq met, breaking loop.";
-            break;
+        if (buffer.at(0) == '1') {
+            plot->plotDataChannel(graph1, buffer, currentTime, Channel1FD.Freq, Channel1FD.Duty, updateTimeFlag);
+        } else if (buffer.at(0) == '2') {
+            plot->plotDataChannel(graph2, buffer, currentTime, Channel2FD.Freq, Channel2FD.Duty, updateTimeFlag);
         }
-
-        int endIndexFreq = buffer.indexOf('\n', indexFreq);
-        if (endIndexFreq == -1) {
-            qDebug() << "Incomplete frequency string, breaking loop.";
-            break;
-        }
-
-        int endIndexDuty = buffer.indexOf('\n', indexDuty);
-        if (endIndexDuty == -1) {
-            qDebug() << "Incomplete duty cycle string, breaking loop.";
-            break;
-        }
-
-        strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2));
-        strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2));
-
-        qDebug() << "Extracted Frequency:" << strFreq << ", Duty Cycle:" << strDuty;
-
-        if (!strFreq.isEmpty() && !strDuty.isEmpty()) {
-            receivedFrequency = strFreq.toInt();
-            receivedDutyCycle = strDuty.toInt();
-        } else {
-            qDebug() << "Failed to extract frequency or duty cycle!";
-        }
-
-        qDebug() << "Received Frequency:" << receivedFrequency;
-        qDebug() << "Received Duty Cycle:" << receivedDutyCycle;
-        buffer.remove(0, endIndexDuty + 1); // Xóa cả chuỗi đã xử lý khỏi buffer
-        updateTimeFlag = 1;
-        IsFreqAndDutyRead = 1;
-        break; // Thoát khỏi vòng lặp sau khi xử lý xong chuỗi F và D
-    }
-
-    if (IsFreqAndDutyRead == 1) {
-        currentTime = elapsedTimer.elapsed() / 1000.0;
-        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
     }
 }
 
-
-void MainWindow::startSerialConnection()
-{
-    if (!serialPort->isOpen()) {
-        qDebug() << "Error: Serial port is not open!";
+void MainWindow::getFreqandDuty(int channel) {
+    QString strFreq, strDuty;
+    int indexFreq = buffer.indexOf("F:");
+    int indexDuty = buffer.indexOf("D:");
+    if (indexFreq == -1 || indexDuty == -1 || indexDuty < indexFreq) {
+        qDebug() << "Invalid data format. Skipping.";
         return;
     }
 
-    // Xóa dữ liệu cũ trong serialPort
-    serialPort->clear();
-
-    // Gửi lệnh "REQ" tới vi điều khiển
-    QByteArray command(1, '1'); // Tạo QByteArray chứa ký tự '1'
-    qint64 bytesWritten = serialPort->write(command);
-
-    qDebug() << "Write:" << command;
-
-    // Kiểm tra số byte đã thực sự được gửi
-    if (bytesWritten == -1) {
-        qDebug() << "Write error:" << serialPort->errorString();
+    int endIndexFreq = buffer.indexOf('\n', indexFreq);
+    int endIndexDuty = buffer.indexOf('\n', indexDuty);
+    if (endIndexFreq == -1 || endIndexDuty == -1) {
+        qDebug() << "Incomplete data. Waiting for more.";
         return;
-    } else if (bytesWritten < command.size()) {
-        qDebug() << "Only part of the data was written. Bytes written:" << bytesWritten;
-        return;
-    } else {
-        qDebug() << "Command '1' sent successfully!";
     }
 
-    // Theo dõi lỗi giao tiếp
-    connect(serialPort, &QSerialPort::errorOccurred, this, [](QSerialPort::SerialPortError error) {
-        if (error != QSerialPort::NoError) {
-            qDebug() << "Serial port error occurred:" << error;
-        }
-    });
+    strFreq = buffer.mid(indexFreq + 2, endIndexFreq - (indexFreq + 2)).trimmed();
+    strDuty = buffer.mid(indexDuty + 2, endIndexDuty - (indexDuty + 2)).trimmed();
 
-    // Kết nối tín hiệu readyRead để xử lý dữ liệu nhận được
-    readSerialData(serialPort);
+    if (strFreq.isEmpty() || strDuty.isEmpty()) {
+        qDebug() << "Frequency or duty cycle string is empty. Skipping.";
+        return;
+    }
+
+    FreqAndDuty_typedef *channelData = (channel == 1) ? &Channel1FD : &Channel2FD;
+    channelData->Freq = strFreq.toInt();
+    channelData->Duty = strDuty.toInt();
+
+    qDebug() << "Channel" << channel << ": Frequency =" << channelData->Freq << ", Duty Cycle =" << channelData->Duty;
+
+    buffer.remove(0, std::max(endIndexFreq, endIndexDuty) + 1); // Xóa phần dữ liệu đã xử lý
 }
+
+void MainWindow::startSerialConnection() {
+    qDebug() << "Channel 1 - Frequency:" << Channel1FD.Freq << ", Duty Cycle:" << Channel1FD.Duty;
+    qDebug() << "Channel 2 - Frequency:" << Channel2FD.Freq << ", Duty Cycle:" << Channel2FD.Duty;
+    plot->plotDataChannel(graph1, buffer, currentTime, Channel1FD.Freq, Channel1FD.Duty, updateTimeFlag);
+}
+
 
 void MainWindow::openSerialPort()
 {
-
     // Đảm bảo cổng nối tiếp không mở trước khi mở
     if (serialPort->isOpen()) {
         serialPort->close();
@@ -308,8 +358,11 @@ void MainWindow::openSerialPort()
         updateTimeFlag = 1;
     connect(serialPort, &QSerialPort::readyRead, this, [=]() {
         currentTime = elapsedTimer.elapsed() / 1000.0; // Cập nhật currentTime ở đây
-        plot->plotData(customPlot, buffer, currentTime, receivedFrequency, receivedDutyCycle, updateTimeFlag);
+        qDebug()<<"bufffer"<<buffer;
         readSerialData(serialPort);
+        //plot->plotDataChannel(graph1, buffer, currentTime, Channel1FD.Freq, Channel1FD.Duty, updateTimeFlag);
+        //plot->plotDataChannel(graph2, buffer, currentTime, Channel2FD.Freq, Channel2FD.Duty, updateTimeFlag);
+
     }
     );
 }

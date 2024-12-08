@@ -12,6 +12,7 @@ class Plot : public QObject{
     Q_OBJECT
 
 private:
+
     double lastByteTime = 0.0;
     bool isZooming;
     bool isPaused; // Correctly declare isPaused
@@ -27,7 +28,7 @@ private:
 
     int disconectedFlag = 0;
 
-    char lastByte = 0;
+    //char lastByte = 0;
     QCustomPlot *customPlot;
     QElapsedTimer elapsedTimer;
 public:
@@ -35,8 +36,11 @@ public:
 
     explicit Plot(QCustomPlot *plot, QObject *parent = nullptr);
 
-    void plotData(QCustomPlot *customPlot, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag);
+    void plotDataChannel1(QCustomPlot *customPlot, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag);
 
+    void plotDataChannel2(QCustomPlot *customPlot, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag);
+
+    void plotDataChannel(QCPGraph *graph, QByteArray &buffer, double &currentTime, int receivedFrequency, int receivedDutyCycle, int &updateTimeFlag);
     QCustomPlot* setupPlot();
 
     //void continuePlot(QCustomPlot *customPlot, double currentTime);
